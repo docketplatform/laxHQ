@@ -145,3 +145,49 @@ test('updateMyName updates the user doc and the family members list', async () =
   await assert.rejects(a.call('updateMyName', { name: '   ' }), /Enter your name/);
   await a.close();
 });
+
+const JAKE = { firstName: 'Jake', lastName: 'Morrison', sport: 'mlax', gradYear: 2029, position: 'midfield', openDivisions: ['D1', 'D3'] };
+
+test('addPlayer needs Pro, then respects maxPlayers', async () => {
+  const a = await newClient('pro-parent');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.claims();
+  await assert.rejects(a.call('addPlayer', JAKE), /needs LaxHQ Pro/);
+
+  await a.call('devSetPlan', { plan: 'pro', maxPlayers: 1 });
+  assert.equal((await a.claims()).pro, true);
+  const { playerId } = await a.call('addPlayer', JAKE);
+  const p = await getDoc(doc(a.db, `families/${familyId}/players/${playerId}`));
+  assert.equal(p.get('gradYear'), 2029);
+  assert.equal(p.get('targetCount'), 0);
+  assert.match(p.get('cardSlug'), /^[a-z2-9]{8}$/);
+  const st = await getDoc(doc(a.db, `families/${familyId}/players/${playerId}/checklist/state`));
+  assert.deepEqual(st.get('done'), {});
+
+  await assert.rejects(a.call('addPlayer', { ...JAKE, firstName: 'Sam' }), /Add a sibling/);
+  await a.call('devSetPlan', { plan: 'pro', maxPlayers: 2 });
+  await a.call('addPlayer', { ...JAKE, firstName: 'Sam', gradYear: 2031 });
+  const fam = await getDoc(doc(a.db, `families/${familyId}`));
+  assert.equal(fam.get('playerCount'), 2);
+});
+
+test('addPlayer and updatePlayer validate input', async () => {
+  const a = await newClient('validator');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.call('devSetPlan', { plan: 'pro' });
+  await a.claims();
+  await assert.rejects(a.call('addPlayer', { ...JAKE, gradYear: 1999 }), /Grad year must be between/);
+  const { playerId } = await a.call('addPlayer', JAKE);
+  await a.call('updatePlayer', { playerId, jersey: '22', academics: { gpa: 3.7 }, cardPublished: true });
+  const p = await getDoc(doc(a.db, `families/${familyId}/players/${playerId}`));
+  assert.equal(p.get('jersey'), '22');
+  assert.equal(p.get('academics').gpa, 3.7);
+  assert.equal(p.get('cardPublished'), true);
+  await assert.rejects(a.call('updatePlayer', { playerId, position: 'striker' }), /Position is not valid/);
+  await assert.rejects(a.call('updatePlayer', { playerId: 'nope', jersey: '1' }), /not found/);
+
+  // Back to free: edits are refused.
+  await a.call('devSetPlan', { plan: 'free' });
+  await a.claims();
+  await assert.rejects(a.call('updatePlayer', { playerId, jersey: '9' }), /needs LaxHQ Pro/);
+});

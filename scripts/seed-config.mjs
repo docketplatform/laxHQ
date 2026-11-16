@@ -38,12 +38,12 @@ export const ncaaRules = {
 
 // Windows are days relative to an anchor: contactOpens = Sept 1 of junior year (gradYear - 2).
 export const checklist = {
-  version: 1,
+  version: 2,
   items: [
-    { id: 'profile-basics', grade: 9, title: 'Fill in your player profile', detail: 'Grad year, position, high school, club team, GPA', window: { anchor: 'contactOpens', startDays: -1095, dueDays: -1000 }, action: { type: 'open', target: 'profile' } },
-    { id: 'ncaa-eligibility', grade: 9, title: 'Learn the NCAA core-course rules', detail: 'D1 and D2 need 16 approved core courses', window: { anchor: 'contactOpens', startDays: -1095, dueDays: -900 } },
-    { id: 'first-school-list', grade: 9, title: 'Start a school list of 15–25 programs', detail: 'Mix of D1, D2 and D3 you would attend without lacrosse', window: { anchor: 'contactOpens', startDays: -900, dueDays: -700 }, action: { type: 'open', target: 'schools' } },
-    { id: 'fall-film-9', grade: 9, title: 'Save fall-ball game film', detail: 'Full games, not just highlights', window: { anchor: 'contactOpens', startDays: -1030, dueDays: -950 } },
+    { id: 'profile-basics', grade: 9, title: 'Fill in your player profile', detail: 'Grad year, position, high school, club team, GPA', window: { anchor: 'contactOpens', startDays: -730, dueDays: -670 }, action: { type: 'open', target: 'profile' }, autoDone: 'profile' },
+    { id: 'ncaa-eligibility', grade: 9, title: 'Learn the NCAA core-course rules', detail: 'D1 and D2 need 16 approved core courses', window: { anchor: 'contactOpens', startDays: -730, dueDays: -580 } },
+    { id: 'first-school-list', grade: 9, title: 'Start a school list of 15–25 programs', detail: 'Mix of D1, D2 and D3 you would attend without lacrosse', window: { anchor: 'contactOpens', startDays: -600, dueDays: -450 }, action: { type: 'open', target: 'schools' } },
+    { id: 'fall-film-9', grade: 9, title: 'Save fall-ball game film', detail: 'Full games, not just highlights', window: { anchor: 'contactOpens', startDays: -700, dueDays: -620 } },
     { id: 'transcript-fall-10', grade: 10, title: 'Upload your fall transcript', detail: 'Unlocks academic fit for your list', window: { anchor: 'contactOpens', startDays: -330, dueDays: -280 }, action: { type: 'open', target: 'profile' } },
     { id: 'soph-reel', grade: 10, title: 'Cut a fall highlight reel', detail: 'Aim for 3–4 minutes, best clips first', window: { anchor: 'contactOpens', startDays: -330, dueDays: -270 }, action: { type: 'open', target: 'card' } },
     { id: 'balance-list', grade: 10, title: 'Balance your list: reach, target, likely', detail: 'Roughly 3 reach, 7 target, 4 likely', window: { anchor: 'contactOpens', startDays: -300, dueDays: -220 }, action: { type: 'open', target: 'schools' } },

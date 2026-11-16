@@ -85,9 +85,12 @@ test('free: can read player data but cannot write any of it', async () => {
 });
 
 // ---- pro writes ----
-test('pro: can edit the player and write contacts, checklist and plan', async () => {
+test('pro: player profile edits go through functions, not direct writes', async () => {
+  await assertFails(updateDoc(doc(pro(), `families/${FID}/players/${PID}`), { gradYear: 2030 }));
+  await assertFails(setDoc(doc(pro(), `families/${FID}/players/p2`), { firstName: 'Sib' }));
+});
+test('pro: can write contacts, checklist and plan', async () => {
   const db = pro();
-  await assertSucceeds(updateDoc(doc(db, `families/${FID}/players/${PID}`), { gradYear: 2030 }));
   await assertSucceeds(setDoc(doc(db, `families/${FID}/players/${PID}/contacts/c1`), { name: 'Coach' }));
   await assertSucceeds(setDoc(doc(db, `families/${FID}/players/${PID}/checklist/state`), { done: {} }));
   await assertSucceeds(setDoc(doc(db, `families/${FID}/players/${PID}/plan/e1`), { title: 'Showcase' }));

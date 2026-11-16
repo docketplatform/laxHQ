@@ -69,6 +69,45 @@ p{margin:0}
 .divider:before,.divider:after{content:"";flex:1;height:1px;background:var(--line)}
 .copy{display:flex;gap:8px}.copy input{flex:1;min-width:0}
 .loading{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+
+.caps{letter-spacing:.08em;text-transform:uppercase}
+.row.start{justify-content:flex-start}.row.baseline{align-items:baseline;gap:8px}.row.wrap{flex-wrap:wrap}
+.stat{font-size:22px;font-family:var(--display)}
+.box{width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #9AA6B8;display:inline-block}
+.box.on{background:var(--ink);border-color:var(--ink)}
+.tick{width:44px;height:44px;flex-shrink:0;border:0;background:transparent;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.tick::before{content:"";width:22px;height:22px;box-sizing:border-box;border:2px solid #8A96A8;border-radius:6px;background:#fff}
+.tick.on::before{border-color:var(--ink);background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/14px no-repeat}
+.tick:disabled{cursor:default;opacity:.7}
+.item{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.list>.item:first-child{border-top:0}
+.struck{text-decoration:line-through;color:var(--muted)}
+.grow{flex:1;min-width:0}
+.link{background:none;border:0;color:var(--blue);font-weight:600;cursor:pointer;min-height:44px;padding:0 4px}
+.c-muted{background:#EEF1F5;color:#4A5668}
+.banner.info{background:#E8EEFF;color:#1A2F6B}.banner.warn{background:#FFF8E1;color:#5A4300}
+.btn-sm{min-height:44px;padding:0 14px;font-size:14px;white-space:nowrap}
+.back{display:inline-flex;align-items:center;min-height:44px;color:var(--blue);font-weight:600;text-decoration:none;align-self:flex-start}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.dev{border-top:1px dashed #B8C2D0;padding-top:10px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.three{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:10px}
+@media (max-width:420px){.three{grid-template-columns:1fr 1fr}.three .field:last-child{grid-column:1/-1}}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+fieldset.card{padding:16px;border:1px solid var(--line)}
+legend{padding:0;margin-bottom:6px}
+.label{font-weight:600;font-size:14px;padding:0;margin-bottom:6px}
+.field select,.field textarea{min-height:48px;padding:10px 14px;border:1px solid #8A96A8;border-radius:12px;background:#fff;color:var(--ink);width:100%;font:inherit}
+.field textarea{min-height:120px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:3px solid var(--sky);outline-offset:1px;border-color:var(--blue)}
+.checks{display:flex;gap:8px;flex-wrap:wrap}
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid #B8C2D0;border-radius:12px;background:#fff;font-weight:600;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--ink)}
+.seg{display:flex;gap:6px;background:#E6EAF0;padding:4px;border-radius:14px;align-self:flex-start}
+.seg button{min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,27,44,.12)}
+a{color:var(--blue)}
+button,input,select,textarea{font:inherit}
 </style>
 </head>
 <body>
@@ -115,340 +154,6 @@ p{margin:0}
   </div>
 </div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import {
-  getAuth, connectAuthEmulator, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, OAuthProvider,
-  sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile,
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, onSnapshot, updateDoc,
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import {
-  getFunctions, connectFunctionsEmulator, httpsCallable,
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
-
-// ---------- config ----------
-// Real projects: replace with the web app config from the Firebase console
-// (Project settings → Your apps). These values are public by design.
-const FIREBASE_CONFIG = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'laxhq-dev.firebaseapp.com',
-  projectId: 'laxhq-dev',
-  storageBucket: 'laxhq-dev.appspot.com',
-  appId: 'REPLACE_ME',
-};
-const params = new URLSearchParams(location.search);
-const USE_EMULATORS = ['localhost', '127.0.0.1'].includes(location.hostname) || params.has('emulator');
-const config = USE_EMULATORS
-  ? { apiKey: 'demo-key', authDomain: 'demo-laxhq.firebaseapp.com', projectId: 'demo-laxhq', storageBucket: 'demo-laxhq.appspot.com' }
-  : FIREBASE_CONFIG;
-
-const app = initializeApp(config);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const fns = getFunctions(app, 'us-central1');
-if (USE_EMULATORS) {
-  const host = params.get('emulatorHost') || '127.0.0.1';
-  connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
-  connectFirestoreEmulator(db, host, 8080);
-  connectFunctionsEmulator(fns, host, 5001);
-}
-const call = (name, data = {}) => httpsCallable(fns, name)(data).then((r) => r.data);
-
-// ---------- state ----------
-const state = { user: null, claims: {}, family: null, plans: null, unsub: null, lastEntitlement: null, ui: {} };
-// state.ui keeps on-screen messages (and the latest invite link) across live re-renders; cleared on navigation.
-function setUi(key, value) { state.ui[key] = value; route(); }
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const safeStorage = {
-  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
-  del(k) { try { localStorage.removeItem(k); } catch {} },
-};
-
-// Remember an invite code from the link until the user has signed in.
-if (params.get('invite')) safeStorage.set('laxhq.invite', params.get('invite'));
-
-/** True while the family's Pro entitlement is active (from the ID token claim). */
-const isPro = () => state.claims.pro === true;
-
-/** Feature gate shared by every screen. Free accounts are view-only. */
-function can(feature) {
-  const plan = isPro() ? 'pro' : 'free';
-  const limits = (state.plans && state.plans[plan]) || {};
-  switch (feature) {
-    case 'save': return !limits.viewOnly && isPro();
-    case 'invite': return true;
-    case 'rename': return true;
-    default: return Boolean(limits[feature]);
-  }
-}
-
-// ---------- sample family (what free accounts browse) ----------
-const SAMPLE = {
-  family: 'Morrison family', player: 'Jake', gradYear: 2029,
-  readiness: 38, stepsDone: 11, stepsTotal: 29,
-  stats: { schools: 14, coaches: 9, events: 3 },
-  week: [
-    { t: 'Cut fall-ball highlight reel', d: '3 games tagged · aim for 3–4 min', done: false },
-    { t: 'Send intro email · 2 D3 schools', d: 'Athletes may reach out any time', done: false },
-    { t: 'Upload fall transcript', d: 'GPA 3.7 · unlocks academic fit', done: true },
-  ],
-  schools: [
-    { n: 'Johns Hopkins', m: 'D1 · Big Ten · Baltimore, MD', tier: 'Reach' },
-    { n: 'Lafayette', m: 'D1 · Patriot League · Easton, PA', tier: 'Target' },
-    { n: 'Tufts', m: 'D3 · NESCAC · Medford, MA', tier: 'Target' },
-    { n: 'Stevens Institute', m: 'D3 · MAC · Hoboken, NJ', tier: 'Likely' },
-  ],
-  coaches: [
-    { n: 'Tufts', m: 'Recruiting coordinator · replied 2 days ago', s: 'Replied', c: 'c-likely' },
-    { n: 'Lafayette', m: 'Head coach · sent 18 days ago', s: 'Follow up', c: 'c-reach' },
-    { n: 'Stevens Institute', m: 'Assistant coach · sent 6 days ago', s: 'Emailed', c: 'c-target' },
-  ],
-  events: [
-    { d: 'Jun 19', n: 'Mid-Atlantic Summer Showcase', m: 'Bel Air, MD · 2 nights · ~$1,150' },
-    { d: 'Jul 10', n: 'Academic D3 Invitational', m: 'Tarrytown, NY · day trip · ~$290' },
-    { d: 'Jul 24', n: 'Northeast Elite Weekend', m: 'Newport, RI · 3 nights · ~$1,400' },
-  ],
-};
-
-/** Sept 1 of junior year = Sept 1 of (gradYear - 2). Returns whole days from today (local time). */
-function daysUntilContact(gradYear, today = new Date()) {
-  const target = new Date(gradYear - 2, 8, 1);
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((target - start) / 864e5);
-}
-
-// ---------- views ----------
-function sampleBanner() {
-  if (isPro()) return '';
-  return `<div class="banner" role="note"><span><b>You’re looking at a sample family.</b>Start Pro to enter and save your own player’s plan.</span></div>`;
-}
-function proStub(what) {
-  return `<div class="card"><h2>${esc(what)}</h2><p class="muted">Your Pro account is ready. Adding your player and their data arrives in the next build phase.</p></div>`;
-}
-
-const views = {
-  home() {
-    if (isPro()) return `<h1>${esc(state.family?.name || 'Your family')}</h1>${proStub('Add your player')}`;
-    const days = daysUntilContact(SAMPLE.gradYear);
-    return `${sampleBanner()}
-      <div><p class="small">Good morning, ${esc(SAMPLE.family)}</p><h1>${esc(SAMPLE.player)} · Class of ${SAMPLE.gradYear}</h1></div>
-      <div class="card dark">
-        <span class="small" style="letter-spacing:.08em;text-transform:uppercase">D1 coach contact opens</span>
-        <div class="row" style="justify-content:flex-start;align-items:baseline;gap:8px"><span class="big">${Math.max(days, 0)}</span><b>days · Sept 1, ${SAMPLE.gradYear - 2}</b></div>
-        <div class="bar" role="img" aria-label="Readiness ${SAMPLE.readiness}%"><i style="width:${SAMPLE.readiness}%"></i></div>
-        <span class="small">Readiness ${SAMPLE.readiness}% · ${SAMPLE.stepsDone} of ${SAMPLE.stepsTotal} steps done</span>
-      </div>
-      <div class="card"><div class="row" style="text-align:center">
-        <div><b style="font-size:22px">${SAMPLE.stats.schools}</b><p class="small">Target schools</p></div>
-        <div><b style="font-size:22px">${SAMPLE.stats.coaches}</b><p class="small">Coaches emailed</p></div>
-        <div><b style="font-size:22px">${SAMPLE.stats.events}</b><p class="small">Summer events</p></div>
-      </div></div>
-      <div class="card"><h2>This week</h2><div class="list">${SAMPLE.week.map((w) => `
-        <div><span aria-hidden="true" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;${w.done ? 'background:var(--ink)' : 'border:2px solid #9AA6B8'}"></span>
-        <span><b style="${w.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(w.t)}</b><br><span class="small">${esc(w.d)}</span></span></div>`).join('')}
-      </div></div>`;
-  },
-  schools() {
-    if (isPro()) return proStub('Target schools');
-    return `${sampleBanner()}<h1>Target schools</h1>
-      <div class="banner" style="background:#E8EEFF;color:#1A2F6B">Balanced list: 3 reach · 7 target · 4 likely</div>
-      ${SAMPLE.schools.map((s) => `<div class="card"><div class="row"><span><b>${esc(s.n)}</b><br><span class="small">${esc(s.m)}</span></span><span class="chip c-${s.tier.toLowerCase()}">${s.tier}</span></div></div>`).join('')}`;
-  },
-  coaches() {
-    if (isPro()) return proStub('Coach outreach');
-    return `${sampleBanner()}<h1>Coach outreach</h1>
-      <div class="banner" style="background:#FFF8E1;color:#5A4300"><span><b>Rule check</b>D1 coaches can’t start recruiting conversations until Sept 1 of junior year, but players can email them now.</span></div>
-      ${SAMPLE.coaches.map((c) => `<div class="card"><div class="row"><span><b>${esc(c.n)}</b><br><span class="small">${esc(c.m)}</span></span><span class="chip ${c.c}">${c.s}</span></div></div>`).join('')}`;
-  },
-  events() {
-    if (isPro()) return proStub('Summer plan');
-    return `${sampleBanner()}<h1>Summer plan</h1>
-      ${SAMPLE.events.map((e) => `<div class="card"><div class="row" style="justify-content:flex-start"><b style="min-width:56px">${esc(e.d)}</b><span><b>${esc(e.n)}</b><br><span class="small">${esc(e.m)}</span></span></div></div>`).join('')}`;
-  },
-  profile() {
-    const fam = state.family || {};
-    const members = Object.entries(fam.members || {});
-    const me = state.user;
-    const myName = (fam.members && me && fam.members[me.uid]?.name) || '';
-    return `<h1>Family</h1>
-      <div class="card">
-        <div class="field"><label for="my-name">Your name</label>
-          <div class="copy"><input id="my-name" value="${esc(myName)}" maxlength="80" autocomplete="name"><button class="btn btn-ghost" id="save-my-name">Save</button></div></div>
-        <p id="my-name-msg" class="${state.ui.myNameMsg?.bad ? 'err' : 'ok'}" role="status" aria-live="polite">${esc(state.ui.myNameMsg?.text || '')}</p>
-        <div class="field"><label for="fam-name">Family name</label>
-          <div class="copy"><input id="fam-name" value="${esc(fam.name || '')}" maxlength="80"><button class="btn btn-ghost" id="save-name">Save</button></div></div>
-        <p id="name-msg" class="${state.ui.nameMsg?.bad ? 'err' : 'ok'}" role="status" aria-live="polite">${esc(state.ui.nameMsg?.text || '')}</p>
-      </div>
-      <div class="card"><h2>Members</h2><div class="list" id="members">${members.length ? members.map(([uid, m]) => `
-        <div><span style="width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0" aria-hidden="true">${esc((m.name || '?').slice(0, 1).toUpperCase())}</span>
-        <span><b>${esc(m.name)}${uid === me?.uid ? ' (you)' : ''}</b><br><span class="small">${m.role === 'player' ? 'Player' : 'Parent'}</span></span></div>`).join('') : '<p class="small">Just you so far.</p>'}
-      </div></div>
-      <div class="card"><h2>Invite your family</h2>
-        <p class="small">Send a link to a co-parent or your player. Each link works once and expires in 7 days.</p>
-        <div class="row" style="justify-content:flex-start;flex-wrap:wrap">
-          <button class="btn btn-dark" data-invite="parent">Invite a parent</button>
-          <button class="btn btn-ghost" data-invite="player">Invite your player</button>
-        </div>
-        <div id="invite-out" ${state.ui.inviteLink ? '' : 'hidden'} class="field"><label for="invite-link">Invite link</label>
-          <div class="copy"><input id="invite-link" readonly value="${esc(state.ui.inviteLink || '')}"><button class="btn btn-primary" id="copy-invite">Copy</button></div></div>
-        <p id="invite-msg" class="${state.ui.inviteMsg?.bad ? 'err' : 'small'}" role="status" aria-live="polite">${esc(state.ui.inviteMsg?.text || '')}</p>
-      </div>
-      <div class="card"><div class="row"><span><b>Plan: ${isPro() ? 'Pro' : 'Free'}</b><br><span class="small">${isPro() ? 'You can enter and save your player’s information.' : 'Free accounts can look around with a sample family.'}</span></span></div>
-        ${isPro() ? '' : '<button class="btn btn-primary" disabled title="Checkout arrives in Phase 6">Start Pro · $500/year (coming soon)</button>'}
-      </div>
-      <p class="small">Signed in as ${esc(me?.email || me?.displayName || '')}</p>
-      <button class="btn btn-ghost" id="sign-out">Sign out</button>`;
-  },
-};
-
-function bindProfile() {
-  $('save-my-name')?.addEventListener('click', async () => {
-    const name = $('my-name').value.replace(/\s+/g, ' ').trim();
-    if (!name) { setUi('myNameMsg', { text: 'Enter your name.', bad: true }); return; }
-    try { await call('updateMyName', { name }); setUi('myNameMsg', { text: 'Saved.' }); }
-    catch (e) { setUi('myNameMsg', { text: e.message || 'Could not save.', bad: true }); }
-  });
-  $('save-name')?.addEventListener('click', async () => {
-    const name = $('fam-name').value.replace(/\s+/g, ' ').trim().slice(0, 80);
-    if (!name) { setUi('nameMsg', { text: 'Enter a family name.', bad: true }); return; }
-    try { await updateDoc(doc(db, `families/${state.claims.fid}`), { name }); setUi('nameMsg', { text: 'Saved.' }); }
-    catch (e) { setUi('nameMsg', { text: 'Could not save. Try again.', bad: true }); }
-  });
-  document.querySelectorAll('[data-invite]').forEach((b) => b.addEventListener('click', async () => {
-    setUi('inviteMsg', { text: 'Creating link…' });
-    try {
-      const { code } = await call('createInvite', { role: b.dataset.invite });
-      const url = new URL(location.href); url.hash = ''; url.search = ''; url.searchParams.set('invite', code);
-      if (USE_EMULATORS) url.searchParams.set('emulator', '1');
-      state.ui.inviteLink = url.toString();
-      setUi('inviteMsg', { text: `Link for your ${b.dataset.invite} is ready.` });
-    } catch (e) { setUi('inviteMsg', { text: e.message || 'Could not create a link.', bad: true }); }
-  }));
-  $('copy-invite')?.addEventListener('click', async () => {
-    const input = $('invite-link'); input.select();
-    try { await navigator.clipboard.writeText(input.value); setUi('inviteMsg', { text: 'Copied.' }); }
-    catch { setUi('inviteMsg', { text: 'Select the link and copy it.' }); }
-  });
-  $('sign-out')?.addEventListener('click', () => signOut(auth));
-}
-
-function route() {
-  if ($('app').hidden) return;
-  const active = document.activeElement;
-  const typing = active && ['fam-name', 'my-name'].includes(active.id) ? { id: active.id, value: active.value } : null;
-  const name = (location.hash.replace(/^#\//, '') || 'home').split('/')[0];
-  const key = views[name] ? name : 'home';
-  $('view').innerHTML = views[key]();
-  document.querySelectorAll('.tabbar a').forEach((a) => {
-    if (a.getAttribute('href') === `#/${key}`) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
-  });
-  if (key === 'profile') {
-    bindProfile();
-    if (typing) { $(typing.id).value = typing.value; $(typing.id).focus(); }
-  }
-  $('plan-badge').textContent = isPro() ? 'Pro' : 'Free';
-  $('plan-badge').classList.toggle('pro', isPro());
-}
-window.addEventListener('hashchange', () => { state.ui = {}; route(); });
-
-// ---------- sign-in ----------
-function showSignin() {
-  $('loading').hidden = true; $('app').hidden = true; $('signin').hidden = false;
-  $('invite-note').hidden = !safeStorage.get('laxhq.invite');
-  $('dev-form').hidden = !USE_EMULATORS;
-}
-function signinMsg(text, bad) { const m = $('signin-msg'); m.className = bad ? 'err' : 'ok'; m.textContent = text; }
-
-$('google').addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => signinMsg(e.message, true)));
-$('apple').addEventListener('click', () => {
-  const p = new OAuthProvider('apple.com'); p.addScope('email'); p.addScope('name');
-  signInWithPopup(auth, p).catch((e) => signinMsg(e.message, true));
-});
-$('email-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = $('email').value.trim();
-  if (!/^\S+@\S+\.\S+$/.test(email)) { signinMsg('Enter a valid email address.', true); return; }
-  try {
-    await sendSignInLinkToEmail(auth, email, { url: location.href.split('#')[0], handleCodeInApp: true });
-    safeStorage.set('laxhq.emailForSignIn', email);
-    signinMsg(`Check ${email} for your sign-in link.`);
-  } catch (err) { signinMsg(err.message, true); }
-});
-$('dev-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = $('dev-email').value.trim(); const name = $('dev-name').value.trim();
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, 'emulator-only').catch((err) => {
-      if (err.code === 'auth/email-already-in-use') return signInWithEmailAndPassword(auth, email, 'emulator-only');
-      throw err;
-    });
-    if (name && !cred.user.displayName) { state.pendingName = name; await updateProfile(cred.user, { displayName: name }); }
-  } catch (err) { signinMsg(err.message, true); }
-});
-
-// Finish an email-link sign-in when the user returns from their inbox.
-if (isSignInWithEmailLink(auth, location.href)) {
-  let email = safeStorage.get('laxhq.emailForSignIn');
-  if (!email) email = window.prompt('Confirm your email to finish signing in');
-  if (email) {
-    signInWithEmailLink(auth, email, location.href)
-      .then(() => { safeStorage.del('laxhq.emailForSignIn'); history.replaceState(null, '', location.pathname + (params.has('emulator') ? '?emulator=1' : '')); })
-      .catch((e) => signinMsg(e.message, true));
-  }
-}
-
-// ---------- session ----------
-async function refreshClaims() {
-  const res = await state.user.getIdTokenResult(true);
-  state.claims = res.claims;
-}
-
-async function startSession(user) {
-  state.user = user;
-  $('signin').hidden = true; $('loading').hidden = false;
-  try {
-    const invite = safeStorage.get('laxhq.invite');
-    if (invite) {
-      try { await call('acceptInvite', { code: invite }); }
-      catch (e) { alert(`Couldn’t join with that invite: ${e.message}`); await call('bootstrapFamily'); }
-      safeStorage.del('laxhq.invite');
-      if (params.has('invite')) { params.delete('invite'); history.replaceState(null, '', location.pathname + (params.toString() ? `?${params}` : '') + location.hash); }
-    } else {
-      await call('bootstrapFamily');
-    }
-    await refreshClaims();
-    if (state.pendingName) { await call('updateMyName', { name: state.pendingName }).catch(() => {}); state.pendingName = null; }
-    const plansSnap = await getDoc(doc(db, 'config/plans')).catch(() => null);
-    state.plans = plansSnap?.exists() ? plansSnap.data() : null;
-
-    if (state.unsub) state.unsub();
-    state.unsub = onSnapshot(doc(db, `families/${state.claims.fid}`), async (snap) => {
-      state.family = snap.data() || null;
-      const ent = JSON.stringify(state.family?.entitlement || null);
-      if (state.lastEntitlement !== null && ent !== state.lastEntitlement) await refreshClaims(); // plan changed → new claims
-      state.lastEntitlement = ent;
-      $('loading').hidden = true; $('app').hidden = false;
-      route();
-    }, (err) => { console.error(err); signinMsg('Could not load your family. Try signing in again.', true); });
-  } catch (e) {
-    console.error(e);
-    $('loading').hidden = true; showSignin(); signinMsg(e.message || 'Something went wrong signing in.', true);
-  }
-}
-
-onAuthStateChanged(auth, (user) => {
-  if (state.unsub) { state.unsub(); state.unsub = null; }
-  if (user) startSession(user);
-  else { Object.assign(state, { user: null, claims: {}, family: null, lastEntitlement: null }); showSignin(); }
-});
-
-// Exposed for automated tests only.
-window.__laxhq = { state, can, daysUntilContact };
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

@@ -11,6 +11,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const crypto = require('node:crypto');
+const { validatePlayer, ValidationError } = require('./lib/player');
 
 admin.initializeApp();
 setGlobalOptions({ region: 'us-central1', maxInstances: 10 });
@@ -49,13 +50,19 @@ async function setClaims(uid, fid) {
   return { fid: fid || null, pro };
 }
 
-/** Re-apply claims to every member of a family (used when the entitlement changes). */
-async function refreshFamilyClaims(fid) {
-  const fam = await db.doc(`families/${fid}`).get();
+/**
+ * Change a family's entitlement. Claims are updated FIRST, then the family doc:
+ * the app refreshes its token when it sees the doc change, so the new claims must
+ * already be in place by then.
+ */
+async function applyEntitlement(fid, entitlement, extra = {}) {
+  const famRef = db.doc(`families/${fid}`);
+  const fam = await famRef.get();
   if (!fam.exists) return;
-  const pro = isProEntitlement(fam.get('entitlement'));
+  const pro = isProEntitlement(entitlement);
   await Promise.all((fam.get('memberUids') || []).map(
     (uid) => admin.auth().setCustomUserClaims(uid, { fid, pro })));
+  await famRef.update({ entitlement, ...extra });
 }
 
 /** 10-character invite code without look-alike characters. */
@@ -239,6 +246,117 @@ exports.updateMyName = onCall(async (req) => {
   return { name };
 });
 
+/** Random lowercase id, e.g. for card slugs. */
+function randomId(len = 8) {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.randomBytes(len);
+  let out = '';
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return out;
+}
+
+/** The caller's family id, read from their user doc (tokens can lag right after setup). */
+async function familyIdOf(uid) {
+  const user = await db.doc(`users/${uid}`).get();
+  const fid = user.exists ? user.get('familyId') : null;
+  if (!fid) throw new HttpsError('failed-precondition', 'Set up your family first.');
+  return fid;
+}
+
+/** Look up the caller's family and require an active Pro entitlement. */
+async function requireProFamily(req) {
+  const uid = requireAuth(req);
+  const fid = await familyIdOf(uid);
+  const fam = await db.doc(`families/${fid}`).get();
+  if (!fam.exists) throw new HttpsError('failed-precondition', 'Set up your family first.');
+  if (!isProEntitlement(fam.get('entitlement'))) {
+    throw new HttpsError('permission-denied', 'Saving your own information needs LaxHQ Pro.');
+  }
+  return { uid, fid, family: fam };
+}
+
+function toHttpsError(e) {
+  if (e instanceof ValidationError) return new HttpsError('invalid-argument', e.message, { field: e.field });
+  return e;
+}
+
+/**
+ * addPlayer — create a player in the caller's Pro family.
+ * Enforces entitlement.maxPlayers (1 + sibling add-ons).
+ * data: player profile (see lib/player.js)
+ */
+exports.addPlayer = onCall(async (req) => {
+  const { uid, fid } = await requireProFamily(req);
+  let clean;
+  try { clean = validatePlayer(req.data || {}); } catch (e) { throw toHttpsError(e); }
+
+  const famRef = db.doc(`families/${fid}`);
+  const playerRef = famRef.collection('players').doc();
+  await db.runTransaction(async (tx) => {
+    const fam = await tx.get(famRef);
+    const max = fam.get('entitlement.maxPlayers') || 0;
+    const count = fam.get('playerCount') || 0;
+    if (count >= max) {
+      throw new HttpsError('resource-exhausted', max <= 1
+        ? 'Add a sibling to your plan to create another player.'
+        : `Your plan covers ${max} players.`);
+    }
+    tx.set(playerRef, {
+      ...clean,
+      teamIds: [],
+      targetCount: 0,
+      cardSlug: randomId(8),
+      cardPublished: false,
+      createdBy: uid,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    tx.set(playerRef.collection('checklist').doc('state'), { templateVersion: 1, done: {}, skipped: {}, custom: {} });
+    tx.update(famRef, { playerCount: FieldValue.increment(1) });
+  });
+  return { playerId: playerRef.id };
+});
+
+/**
+ * updatePlayer — edit a player's profile (only the fields sent).
+ * data: { playerId, ...fields }
+ */
+exports.updatePlayer = onCall(async (req) => {
+  const { fid } = await requireProFamily(req);
+  const { playerId, ...fields } = req.data || {};
+  if (typeof playerId !== 'string' || !playerId) throw new HttpsError('invalid-argument', 'playerId is required.');
+  if (Object.prototype.hasOwnProperty.call(fields, 'cardPublished')) {
+    fields.cardPublished = Boolean(fields.cardPublished);
+  }
+  const { cardPublished, ...profile } = fields;
+  let clean;
+  try { clean = validatePlayer(profile, { partial: true }); } catch (e) { throw toHttpsError(e); }
+  if (cardPublished !== undefined) clean.cardPublished = cardPublished;
+  if (!Object.keys(clean).length) throw new HttpsError('invalid-argument', 'Nothing to update.');
+
+  const ref = db.doc(`families/${fid}/players/${playerId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'That player was not found.');
+  await ref.update({ ...clean, updatedAt: FieldValue.serverTimestamp() });
+  return { ok: true };
+});
+
+/**
+ * devSetPlan — EMULATOR ONLY. Switch the caller's family between free and Pro
+ * so every Pro screen can be tested before Stripe is connected.
+ * data: { plan: 'free' | 'pro', maxPlayers? }
+ */
+exports.devSetPlan = onCall(async (req) => {
+  if (process.env.FUNCTIONS_EMULATOR !== 'true') throw new HttpsError('permission-denied', 'Not available.');
+  const fid = await familyIdOf(requireAuth(req));
+  const pro = req.data && req.data.plan === 'pro';
+  await applyEntitlement(fid, pro
+    ? { plan: 'pro', source: 'dev', interval: 'year', status: 'active', currentPeriodEnd: null,
+      maxPlayers: Math.min(Math.max(Number(req.data.maxPlayers) || 1, 1), 6), orgId: null }
+    : { ...FREE_ENTITLEMENT });
+  return { plan: pro ? 'pro' : 'free' };
+});
+
 /** refreshMyClaims — re-read the family's entitlement and update this user's claims. */
 exports.refreshMyClaims = onCall(async (req) => {
   const uid = requireAuth(req);
@@ -246,5 +364,3 @@ exports.refreshMyClaims = onCall(async (req) => {
   return { claims: await setClaims(uid, userSnap.get('familyId') || null) };
 });
 
-// refreshFamilyClaims is used by the billing webhooks in Phase 6.
-void refreshFamilyClaims;

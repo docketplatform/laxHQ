@@ -29,10 +29,9 @@ service cloud.firestore {
 
       match /players/{pid} {
         allow read: if inFamily(fid);
-        allow update: if inFamily(fid)
-          && isPro()
-          && !changes().hasAny(['cardStats', 'cardSlug', 'teamIds', 'createdAt']);
-        // create: addPlayer callable (enforces entitlement.maxPlayers)
+        // create and update: addPlayer / updatePlayer callables (validated, Pro only).
+        // The one direct write allowed is the targetCount bump that rides along with a target.
+        allow update: if inFamily(fid) && isPro() && changes().hasOnly(['targetCount']);
 
         match /targets/{sid} {
           allow read: if inFamily(fid);
