@@ -13,7 +13,7 @@ const TIER_LABEL = { reach: 'Reach', target: 'Target', likely: 'Likely' };
 const STATUSES = [
   { value: 'researching', label: 'Researching' }, { value: 'contacted', label: 'Contacted' },
   { value: 'engaged', label: 'Talking with coaches' }, { value: 'visited', label: 'Visited' },
-  { value: 'offer', label: 'Offer' }, { value: 'dropped', label: 'Dropped' },
+  { value: 'offer', label: 'Offer' }, { value: 'committed', label: 'Committed' }, { value: 'dropped', label: 'Dropped' },
 ];
 const statusLabel = (v) => STATUSES.find((s) => s.value === v)?.label || 'Researching';
 const chip = (tier) => (tier ? `<span class="chip c-${tier}">${TIER_LABEL[tier]}</span>` : '<span class="chip c-muted">Not rated</span>');
@@ -156,8 +156,14 @@ function detailView(ctx, id) {
       ${ac.avgHsGpa == null && ac.sat25 == null && ac.admitRate == null ? '<p class="muted">Admissions data for this school isn’t loaded yet.</p>' : ''}
       ${myGpa == null && !pa.sat && !pa.act ? '<p class="small">Add a GPA or test score on the Profile tab to compare.</p>' : ''}
       <p class="small">Compared with all admitted students. The bar for recruited athletes can differ, especially at very selective schools.</p>
+      ${ctx.state.ui.stats?.id === t.schoolId && ctx.state.ui.stats.committed ? `<p class="small">LaxHQ families who committed here: average GPA <b>${ctx.state.ui.stats.committed.avgGpa}</b> (${ctx.state.ui.stats.committed.count} families shared).</p>` : ''}
       <p class="small">Roster connections (players from your club, high school and state) arrive after launch.</p>
     </section>
+    ${t.status === 'committed' && !t.outcomeReported && !t.custom ? `<section class="card banner-card" id="outcome">
+      <h2>Congratulations!</h2>
+      <p>Share ${esc(p.firstName)}’s GPA, anonymously, to help other families see what committed players at ${esc(t.name)} look like? It only appears as an average once 5 or more families share.</p>
+      <div class="row start wrap"><button class="btn btn-primary" data-outcome="share">Share anonymously</button><button class="btn btn-ghost" data-outcome="private">Keep it private</button></div>
+    </section>` : ''}
     <form id="target-form" class="card" data-keep>
       <h2>Your notes</h2>
       <div class="two">
@@ -246,6 +252,20 @@ export default {
         if (!confirm('Remove this school from the list?')) return;
         try { await removeTarget(ctx, id); ctx.navigate('#/schools'); } catch (err) { ctx.setUi('targetMsg', { text: errorText(err), bad: true }); }
       });
+      document.querySelectorAll('[data-outcome]').forEach((b) => b.addEventListener('click', async () => {
+        try {
+          await ctx.call('reportOutcome', { playerId: ctx.currentPlayer().id, targetId: id, share: b.dataset.outcome === 'share' });
+          await updateDoc(ref, { outcomeReported: true });
+          ctx.setUi('targetMsg', { text: b.dataset.outcome === 'share' ? 'Thanks for sharing.' : 'Saved. Nothing was shared.' });
+        } catch (err) { ctx.setUi('targetMsg', { text: errorText(err), bad: true }); }
+      }));
+      const tt = ctx.state.targets.find((x) => x.id === id);
+      if (tt?.schoolId && ctx.state.ui.stats?.id !== tt.schoolId) {
+        ctx.state.ui.stats = { id: tt.schoolId };
+        getDoc(doc(ctx.db, `schoolStats/${tt.schoolId}_${tt.sport}`)).then((s) => {
+          if (s.exists() && s.get('committed')) ctx.setUi('stats', { id: tt.schoolId, committed: s.get('committed') });
+        }).catch(() => {});
+      }
       // Refresh the stored school snapshot if the catalog has newer admissions data.
       const t = ctx.state.targets.find((x) => x.id === id);
       if (t && !t.custom && t.schoolId && !t._refreshed) {

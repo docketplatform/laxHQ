@@ -4,6 +4,7 @@ import plan from './plan.js';
 import onboarding from './onboarding.js';
 import profile from './profile.js';
 import schools from './schools.js';
+import coaches from './coaches.js';
 import { sampleViews } from './sample.js';
 
 /** Placeholder for Pro screens that arrive in later phases. */
@@ -20,6 +21,6 @@ export const views = {
   onboarding,
   profile,
   schools,
-  coaches: later({ key: 'coaches', text: 'Coach outreach' }, 'Your coach pipeline arrives in a later build.'),
+  coaches,
   events: later({ key: 'events', text: 'Summer plan' }, 'Your summer plan arrives in a later build.'),
 };

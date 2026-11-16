@@ -1,6 +1,7 @@
 // End-to-end tests for the Phase 0 callables, run against the Auth, Firestore and
 // Functions emulators: npm run test:functions
-import { test, before, afterEach } from 'node:test';
+import { test, before, after, afterEach } from 'node:test';
+import { startMockAnthropic } from './mock-anthropic.mjs';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase/app';
 import {
@@ -256,4 +257,124 @@ test('card views: counted once per viewer, bots ignored, coach tokens attributed
   assert.deepEqual(st.recentSchools, ['Tufts University'], 'a token from another family is not attributed');
   const contact = await adb.doc(`families/${familyId}/players/${playerId}/contacts/c1`).get();
   assert.equal(contact.get('cardViews'), 1);
+});
+
+// ---------- Phase 4: coach outreach ----------
+let mock;
+before(async () => { mock = await startMockAnthropic(); });
+after(async () => { await mock?.close(); });
+
+async function proPlayer(label, extra = {}) {
+  const a = await newClient(label);
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.call('devSetPlan', { plan: 'pro' });
+  await a.claims();
+  const { playerId } = await a.call('addPlayer', { ...JAKE, ...extra });
+  return { a, fid: familyId, pid: playerId, base: `families/${familyId}/players/${playerId}` };
+}
+
+test('aiDraftEmail sends the profile to Claude, adds a tracked card link and counts the quota', async () => {
+  const { a, fid, pid, base } = await proPlayer('drafter', { academics: { gpa: 3.7 }, club: { name: 'Chesapeake Elite' } });
+  await a.call('updatePlayer', { playerId: pid, cardPublished: true });
+  await adb.doc(`${base}/targets/tufts-university`).set({ schoolId: 'tufts-university', name: 'Tufts University', notes: 'Strong engineering school.' });
+  await adb.doc(`${base}/contacts/c1`).set({ schoolId: 'tufts-university', schoolName: 'Tufts University', name: 'Coach Reyes', role: 'head', email: 'reyes@tufts.edu', stage: 'to_email' });
+
+  mock.setReply(() => ({ json: { subject: 'Class of 2029 Midfield · Chesapeake Elite · Jake Morrison', body: 'Coach Reyes,\n\nI am Jake.\n\nJake Morrison' } }));
+  const before = mock.requests.length;
+  const draft = await a.call('aiDraftEmail', { playerId: pid, contactId: 'c1', kind: 'intro', appOrigin: 'http://127.0.0.1:5000' });
+  assert.match(draft.subject, /Class of 2029/);
+  assert.equal(draft.remaining, 59);
+
+  const sent = mock.requests[before].body;
+  assert.equal(sent.model, 'claude-opus-5-5');
+  assert.equal(sent.output_config.format.type, 'json_schema');
+  assert.deepEqual(sent.fallbacks, 'default');
+  const facts = sent.messages[0].content;
+  assert.match(facts, /Jake Morrison, Class of 2029, midfield/);
+  assert.match(facts, /Strong engineering school/);
+  const token = (await adb.doc(`${base}/contacts/c1`).get()).get('cardToken');
+  assert.ok(token);
+  assert.match(facts, new RegExp(`http://127.0.0.1:5000/c/[a-z2-9]{8}\\?r=${token}`));
+  assert.equal((await adb.doc(`cardTokens/${token}`).get()).get('schoolName'), 'Tufts University');
+
+  // A refusal returns a clear error and gives the draft back.
+  mock.setReply(() => ({ stop_reason: 'refusal' }));
+  await assert.rejects(a.call('aiDraftEmail', { playerId: pid, contactId: 'c1', appOrigin: 'http://127.0.0.1:5000' }), /couldn’t draft/);
+  const month = `${new Date().getUTCFullYear()}${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`;
+  assert.equal((await adb.doc(`usage/${fid}_${month}`).get()).get('aiDrafts'), 1);
+
+  // Out of drafts for the month.
+  await adb.doc(`usage/${fid}_${month}`).set({ aiDrafts: 60 }, { merge: true });
+  await assert.rejects(a.call('aiDraftEmail', { playerId: pid, contactId: 'c1', appOrigin: 'http://127.0.0.1:5000' }), /used all 60 AI drafts/);
+  mock.setReply(() => ({ json: { subject: 'S', body: 'B' } }));
+});
+
+test('contactCardLink needs a published card and returns a tracked link', async () => {
+  const { a, pid, base } = await proPlayer('linker');
+  await adb.doc(`${base}/contacts/c2`).set({ schoolId: 'lafayette-college', schoolName: 'Lafayette College', name: 'Coach Kim' });
+  await assert.rejects(a.call('contactCardLink', { playerId: pid, contactId: 'c2', appOrigin: 'https://laxhq.app' }), /Turn on sharing/);
+  await a.call('updatePlayer', { playerId: pid, cardPublished: true });
+  const { url } = await a.call('contactCardLink', { playerId: pid, contactId: 'c2', appOrigin: 'https://laxhq.app/anything' });
+  assert.match(url, /^https:\/\/laxhq\.app\/c\/[a-z2-9]{8}\?r=[A-Za-z2-9]{12}$/);
+  const again = await a.call('contactCardLink', { playerId: pid, contactId: 'c2', appOrigin: 'https://laxhq.app' });
+  assert.equal(again.url, url, 'the same coach keeps the same token');
+});
+
+test('coach directory: two families confirm an email; a bounce hides it', async () => {
+  const f1 = await proPlayer('dir1');
+  const f2 = await proPlayer('dir2');
+  const coach = { schoolId: 'middlebury-college', schoolName: 'Middlebury College', name: 'Coach Ellis', role: 'assistant', email: 'Ellis@Middlebury.edu' };
+  await adb.doc(`${f1.base}/contacts/m1`).set(coach);
+  await new Promise((r) => setTimeout(r, 1500));
+  const none = await adb.collection('coaches').where('schoolId', '==', 'middlebury-college').get();
+  assert.equal(none.size, 0, 'one family alone is only a suggestion');
+
+  await adb.doc(`${f2.base}/contacts/m2`).set({ ...coach, email: 'ellis@middlebury.edu ' });
+  const promoted = await until(async () => { const q = await adb.collection('coaches').where('schoolId', '==', 'middlebury-college').get(); return q.docs[0]; });
+  assert.equal(promoted.get('status'), 'active');
+  assert.equal(promoted.get('confirmations'), 2);
+  assert.equal(promoted.get('email'), 'ellis@middlebury.edu');
+  await until(async () => (await adb.doc(`${f2.base}/contacts/m2`).get()).get('coachId') === promoted.id);
+
+  // Families can read active coaches; the suggestion log stays private.
+  await f1.a.claims();
+  assert.equal((await getDoc(doc(f1.a.db, `coaches/${promoted.id}`))).get('name'), 'Coach Ellis');
+
+  const r = await f1.a.call('reportCoach', { coachId: promoted.id, reason: 'bounced' });
+  assert.equal(r.suppressed, true);
+  assert.equal((await adb.doc(`coaches/${promoted.id}`).get()).get('status'), 'suppressed');
+});
+
+test('a logged reply alone promotes a coach', async () => {
+  const f = await proPlayer('replier');
+  await adb.doc(`${f.base}/contacts/r1`).set({ schoolId: 'bowdoin-college', schoolName: 'Bowdoin College', name: 'Coach Park', email: 'park@bowdoin.edu', lastReplyAt: new Date() });
+  const c = await until(async () => { const q = await adb.collection('coaches').where('schoolId', '==', 'bowdoin-college').get(); return q.docs[0]; });
+  assert.equal(c.get('replyConfirmed'), true);
+});
+
+test('reportOutcome publishes a school GPA average only from 5 shared reports', async () => {
+  const families = [];
+  for (let i = 0; i < 5; i++) families.push(await proPlayer(`commit${i}`, { academics: { gpa: 3.4 + i * 0.1 } }));
+  for (const [i, f] of families.entries()) {
+    await adb.doc(`${f.base}/targets/hamilton-college`).set({ schoolId: 'hamilton-college', name: 'Hamilton College' });
+    await f.a.call('reportOutcome', { playerId: f.pid, targetId: 'hamilton-college', share: true });
+    const stats = (await adb.doc('schoolStats/hamilton-college_mlax').get()).get('committed');
+    if (i < 4) assert.equal(stats, null, `hidden with ${i + 1} reports`);
+    else assert.deepEqual(stats, { count: 5, avgGpa: 3.6 });
+  }
+});
+
+test('daily nudges turn due follow-ups into one alert each', async () => {
+  const f = await proPlayer('nudged');
+  await adb.doc(`${f.base}/contacts/n1`).set({ schoolName: 'Colgate University', name: 'Coach Diaz', stage: 'emailed', nextFollowUpAt: new Date(Date.now() - 3600e3) });
+  await adb.doc(`${f.base}/contacts/n2`).set({ schoolName: 'Bucknell University', name: 'Coach Fox', stage: 'emailed', nextFollowUpAt: new Date(Date.now() + 10 * 864e5) });
+  const first = await f.a.call('devRunNudges', {});
+  assert.ok(first.written >= 1);
+  const alerts = await adb.collection(`${f.base}/alerts`).get();
+  assert.equal(alerts.size, 1);
+  assert.match(alerts.docs[0].get('title'), /Follow up with Coach Diaz at Colgate University/);
+  await f.a.call('devRunNudges', {});
+  assert.equal((await adb.collection(`${f.base}/alerts`).get()).size, 1, 'no duplicate alert');
+  await f.a.call('devRunNudges', { asOf: new Date(Date.now() + 11 * 864e5).toISOString() });
+  assert.equal((await adb.collection(`${f.base}/alerts`).get()).size, 2);
 });

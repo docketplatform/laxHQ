@@ -5,12 +5,13 @@ import {
   signInWithEmailAndPassword, updateProfile,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, onSnapshot, collection, query, orderBy,
+  doc, getDoc, onSnapshot, collection, query, orderBy, where,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, call, params, USE_EMULATORS } from './firebase.js';
 import { $, safeStorage, errorText } from './util.js';
 import { views } from './views/index.js';
 import { maybeSubmitDraft } from './views/onboarding.js';
+import { stopCoachWatch } from './views/coaches.js';
 
 // ---------- state ----------
 export const state = {
@@ -24,6 +25,9 @@ export const state = {
   playerId: null,         // the player being viewed
   checklist: null,        // live checklist/state for that player
   targets: [],            // live target schools for that player
+  alerts: [],             // live, undismissed alerts for that player
+  contacts: null,         // coaches tab data (loaded when the tab is open)
+  touches: null,
   catalog: null,          // compact school index (catalog/index), loaded on demand
   ui: {},                 // messages that must survive live re-renders; cleared on navigation
   lastEntitlement: null,
@@ -65,6 +69,7 @@ const ctx = {
   state, call, db, can, isPro, setUi, currentPlayer, selectPlayer, USE_EMULATORS,
   navigate: (hash) => { if (location.hash === hash) render(); else location.hash = hash; },
   refreshClaims: async () => { await refreshClaims(); render(); },
+  rerender: () => render(),
   signOut: () => signOut(auth),
 };
 
@@ -183,11 +188,15 @@ async function loadConfig() {
 
 function watchPlayer() {
   const p = currentPlayer();
-  if (!p) { subscribe('checklist', () => {}); subscribe('targets', () => {}); state.checklist = null; state.targets = []; return; }
+  if (!p) { subscribe('checklist', () => {}); subscribe('targets', () => {}); subscribe('alerts', () => {}); state.checklist = null; state.targets = []; state.alerts = []; return; }
   subscribe('checklist', onSnapshot(doc(db, `families/${state.claims.fid}/players/${p.id}/checklist/state`), (s) => {
     state.checklist = s.data() || { done: {}, skipped: {}, custom: {} };
     render();
   }, (err) => console.error('checklist', err)));
+  subscribe('alerts', onSnapshot(query(collection(db, `families/${state.claims.fid}/players/${p.id}/alerts`), where('dismissedAt', '==', null)), (s) => {
+    state.alerts = s.docs.map((d) => ({ id: d.id, ...d.data() }));
+    render();
+  }, (err) => console.error('alerts', err)));
   subscribe('targets', onSnapshot(collection(db, `families/${state.claims.fid}/players/${p.id}/targets`), (s) => {
     state.targets = s.docs.map((d) => ({ id: d.id, ...d.data() }));
     render();
@@ -255,6 +264,7 @@ if (publicCard) {
     .then(() => { if (params.has('print')) setTimeout(() => window.print(), 400); });
 } else onAuthStateChanged(auth, (user) => {
   unsubscribeAll();
+  stopCoachWatch();
   if (user) startSession(user);
   else {
     Object.assign(state, { user: null, claims: {}, family: null, players: [], playerId: null, checklist: null, lastEntitlement: null, ready: false, ui: {}, loaded: { family: false, players: false } });

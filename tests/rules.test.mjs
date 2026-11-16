@@ -210,3 +210,24 @@ test('cards are public; slug maps, tokens and view logs are server-only', async 
   await assertFails(getDoc(doc(pro(), 'cardTokens/t1')));
   await assertFails(getDoc(doc(pro(), 'cardViews/abcd2345/views/v1')));
 });
+
+test('coach directory: active coaches readable by signed-in users; suggestions, reports, outcomes private', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'coaches/k1'), { status: 'active', name: 'Coach A' });
+    await setDoc(doc(db, 'coaches/k2'), { status: 'suppressed', name: 'Coach B' });
+    await setDoc(doc(db, 'coachSuggestions/k1'), { fids: [FID] });
+    await setDoc(doc(db, 'outcomes/x'), { gpa: 3.5 });
+    await setDoc(doc(db, 'schoolStats/s_mlax'), { committed: null });
+  });
+  await assertSucceeds(getDoc(doc(free(), 'coaches/k1')));
+  await assertFails(getDoc(doc(free(), 'coaches/k2')));
+  await assertFails(setDoc(doc(pro(), 'coaches/k3'), { status: 'active' }));
+  await assertFails(getDoc(doc(pro(), 'coachSuggestions/k1')));
+  await assertFails(getDoc(doc(pro(), 'outcomes/x')));
+  await assertSucceeds(getDoc(doc(anon(), 'schoolStats/s_mlax')));
+});
+test('touches live under the player; pro writes them', async () => {
+  await assertSucceeds(setDoc(doc(pro(), `families/${FID}/players/${PID}/touches/t1`), { contactId: 'c1', type: 'email_out', at: new Date() }));
+  await assertFails(setDoc(doc(free(), `families/${FID}/players/${PID}/touches/t2`), { contactId: 'c1', type: 'email_out' }));
+});

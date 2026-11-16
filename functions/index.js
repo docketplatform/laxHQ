@@ -369,3 +369,15 @@ const card = require('./card');
 
 exports.onPlayerWrite = card.onPlayerWrite;
 exports.cardView = card.cardView;
+
+// ---------- coach outreach (Phase 4) ----------
+const coaches = require('./coaches');
+
+coaches.init({ requireProFamily, requireAuth });
+exports.contactCardLink = coaches.contactCardLink;
+exports.aiDraftEmail = coaches.aiDraftEmail;
+exports.onContactWrite = coaches.onContactWrite;
+exports.reportCoach = coaches.reportCoach;
+exports.reportOutcome = coaches.reportOutcome;
+exports.dailyNudges = coaches.dailyNudges;
+exports.devRunNudges = coaches.devRunNudges;
