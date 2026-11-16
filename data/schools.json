@@ -1,0 +1,653 @@
+{
+ "_note": "Starter catalog. Verify every division and conference against each school before launch; academics come from scripts/import-scorecard.mjs.",
+ "schools": [
+  {
+   "id": "johns-hopkins-university",
+   "name": "Johns Hopkins University",
+   "city": "Baltimore",
+   "state": "MD",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "university-of-maryland",
+   "name": "University of Maryland",
+   "city": "College Park",
+   "state": "MD",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "university-of-michigan",
+   "name": "University of Michigan",
+   "city": "Ann Arbor",
+   "state": "MI",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "ohio-state-university",
+   "name": "Ohio State University",
+   "city": "Columbus",
+   "state": "OH",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "penn-state-university",
+   "name": "Penn State University",
+   "city": "University Park",
+   "state": "PA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "rutgers-university",
+   "name": "Rutgers University",
+   "city": "New Brunswick",
+   "state": "NJ",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "northwestern-university",
+   "name": "Northwestern University",
+   "city": "Evanston",
+   "state": "IL",
+   "programs": {
+    "wlax": {
+     "division": "D1",
+     "conference": "Big Ten"
+    }
+   }
+  },
+  {
+   "id": "duke-university",
+   "name": "Duke University",
+   "city": "Durham",
+   "state": "NC",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "ACC"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "ACC"
+    }
+   }
+  },
+  {
+   "id": "university-of-north-carolina",
+   "name": "University of North Carolina",
+   "city": "Chapel Hill",
+   "state": "NC",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "ACC"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "ACC"
+    }
+   }
+  },
+  {
+   "id": "university-of-notre-dame",
+   "name": "University of Notre Dame",
+   "city": "Notre Dame",
+   "state": "IN",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "ACC"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "ACC"
+    }
+   }
+  },
+  {
+   "id": "syracuse-university",
+   "name": "Syracuse University",
+   "city": "Syracuse",
+   "state": "NY",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "ACC"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "ACC"
+    }
+   }
+  },
+  {
+   "id": "university-of-virginia",
+   "name": "University of Virginia",
+   "city": "Charlottesville",
+   "state": "VA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "ACC"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "ACC"
+    }
+   }
+  },
+  {
+   "id": "boston-college",
+   "name": "Boston College",
+   "city": "Chestnut Hill",
+   "state": "MA",
+   "programs": {
+    "wlax": {
+     "division": "D1",
+     "conference": "ACC"
+    }
+   }
+  },
+  {
+   "id": "cornell-university",
+   "name": "Cornell University",
+   "city": "Ithaca",
+   "state": "NY",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "princeton-university",
+   "name": "Princeton University",
+   "city": "Princeton",
+   "state": "NJ",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "yale-university",
+   "name": "Yale University",
+   "city": "New Haven",
+   "state": "CT",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "harvard-university",
+   "name": "Harvard University",
+   "city": "Cambridge",
+   "state": "MA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "university-of-pennsylvania",
+   "name": "University of Pennsylvania",
+   "city": "Philadelphia",
+   "state": "PA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "brown-university",
+   "name": "Brown University",
+   "city": "Providence",
+   "state": "RI",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "dartmouth-college",
+   "name": "Dartmouth College",
+   "city": "Hanover",
+   "state": "NH",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Ivy League"
+    }
+   }
+  },
+  {
+   "id": "united-states-military-academy-army",
+   "name": "United States Military Academy (Army)",
+   "city": "West Point",
+   "state": "NY",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "united-states-naval-academy-navy",
+   "name": "United States Naval Academy (Navy)",
+   "city": "Annapolis",
+   "state": "MD",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "lafayette-college",
+   "name": "Lafayette College",
+   "city": "Easton",
+   "state": "PA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "lehigh-university",
+   "name": "Lehigh University",
+   "city": "Bethlehem",
+   "state": "PA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "bucknell-university",
+   "name": "Bucknell University",
+   "city": "Lewisburg",
+   "state": "PA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "colgate-university",
+   "name": "Colgate University",
+   "city": "Hamilton",
+   "state": "NY",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "college-of-the-holy-cross",
+   "name": "College of the Holy Cross",
+   "city": "Worcester",
+   "state": "MA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "loyola-university-maryland",
+   "name": "Loyola University Maryland",
+   "city": "Baltimore",
+   "state": "MD",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Patriot League"
+    }
+   }
+  },
+  {
+   "id": "georgetown-university",
+   "name": "Georgetown University",
+   "city": "Washington",
+   "state": "DC",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big East"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big East"
+    }
+   }
+  },
+  {
+   "id": "villanova-university",
+   "name": "Villanova University",
+   "city": "Villanova",
+   "state": "PA",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big East"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big East"
+    }
+   }
+  },
+  {
+   "id": "university-of-denver",
+   "name": "University of Denver",
+   "city": "Denver",
+   "state": "CO",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big East"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big East"
+    }
+   }
+  },
+  {
+   "id": "marquette-university",
+   "name": "Marquette University",
+   "city": "Milwaukee",
+   "state": "WI",
+   "programs": {
+    "mlax": {
+     "division": "D1",
+     "conference": "Big East"
+    },
+    "wlax": {
+     "division": "D1",
+     "conference": "Big East"
+    }
+   }
+  },
+  {
+   "id": "tufts-university",
+   "name": "Tufts University",
+   "city": "Medford",
+   "state": "MA",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "middlebury-college",
+   "name": "Middlebury College",
+   "city": "Middlebury",
+   "state": "VT",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "amherst-college",
+   "name": "Amherst College",
+   "city": "Amherst",
+   "state": "MA",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "williams-college",
+   "name": "Williams College",
+   "city": "Williamstown",
+   "state": "MA",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "wesleyan-university",
+   "name": "Wesleyan University",
+   "city": "Middletown",
+   "state": "CT",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "bowdoin-college",
+   "name": "Bowdoin College",
+   "city": "Brunswick",
+   "state": "ME",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "hamilton-college",
+   "name": "Hamilton College",
+   "city": "Clinton",
+   "state": "NY",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "NESCAC"
+    }
+   }
+  },
+  {
+   "id": "washington-and-lee-university",
+   "name": "Washington and Lee University",
+   "city": "Lexington",
+   "state": "VA",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "ODAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "ODAC"
+    }
+   }
+  },
+  {
+   "id": "stevens-institute-of-technology",
+   "name": "Stevens Institute of Technology",
+   "city": "Hoboken",
+   "state": "NJ",
+   "programs": {
+    "mlax": {
+     "division": "D3",
+     "conference": "MAC"
+    },
+    "wlax": {
+     "division": "D3",
+     "conference": "MAC"
+    }
+   }
+  }
+ ]
+}

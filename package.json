@@ -6,8 +6,8 @@
     "test:functions": "firebase emulators:exec --only auth,firestore,functions --project demo-laxhq \"node --test tests/functions.test.mjs\"",
     "test": "npm run test:unit && npm run test:rules && npm run test:functions && npm run test:e2e",
     "emulators": "firebase emulators:start --project demo-laxhq",
-    "seed": "node scripts/seed-config.mjs",
-    "test:e2e": "firebase emulators:exec --only auth,firestore,functions,hosting --project demo-laxhq \"node scripts/seed-config.mjs && node tests/e2e.mjs\"",
+    "seed": "node scripts/seed-config.mjs && node scripts/seed-schools.mjs",
+    "test:e2e": "firebase emulators:exec --only auth,firestore,functions,hosting --project demo-laxhq \"node scripts/seed-config.mjs && node scripts/seed-schools.mjs && node tests/e2e.mjs && node tests/e2e/schools.mjs\"",
     "test:unit": "node --test tests/unit/*.test.mjs"
   },
   "devDependencies": {
@@ -15,5 +15,6 @@
     "firebase": "^10.14.1",
     "firebase-admin": "^12.7.0",
     "firebase-tools": "^13.35.1"
-  }
+  },
+  "type": "module"
 }

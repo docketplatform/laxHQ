@@ -53,6 +53,11 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
         <div class="field"><label for="${id}-team">Team</label><input id="${id}-team" name="club.team" value="${esc(club.team)}" maxlength="40" placeholder="2029"></div>
         <div class="field"><label for="${id}-level">Level</label><select id="${id}-level" name="club.level">${options(CLUB_LEVELS, club.level, { blank: 'Choose' })}</select></div>
       </div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" name="athletic.varsityStarter"${p.athletic?.varsityStarter ? ' checked' : ''}> Varsity starter</label>
+        <label class="check"><input type="checkbox" name="athletic.allConference"${p.athletic?.allConference ? ' checked' : ''}> All-conference or all-state</label>
+      </div>
+      <p class="small">Used for the athletic fit estimate on your school list.</p>
     </fieldset>
 
     ${full ? `<fieldset class="card"><legend><h2>Rankings</h2></legend>

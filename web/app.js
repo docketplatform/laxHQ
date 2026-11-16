@@ -23,6 +23,8 @@ export const state = {
   players: [],            // live list of this family's players
   playerId: null,         // the player being viewed
   checklist: null,        // live checklist/state for that player
+  targets: [],            // live target schools for that player
+  catalog: null,          // compact school index (catalog/index), loaded on demand
   ui: {},                 // messages that must survive live re-renders; cleared on navigation
   lastEntitlement: null,
   ready: false,          // true once both the family and the player list have loaded
@@ -181,11 +183,15 @@ async function loadConfig() {
 
 function watchPlayer() {
   const p = currentPlayer();
-  if (!p) { subscribe('checklist', () => {}); state.checklist = null; return; }
+  if (!p) { subscribe('checklist', () => {}); subscribe('targets', () => {}); state.checklist = null; state.targets = []; return; }
   subscribe('checklist', onSnapshot(doc(db, `families/${state.claims.fid}/players/${p.id}/checklist/state`), (s) => {
     state.checklist = s.data() || { done: {}, skipped: {}, custom: {} };
     render();
   }, (err) => console.error('checklist', err)));
+  subscribe('targets', onSnapshot(collection(db, `families/${state.claims.fid}/players/${p.id}/targets`), (s) => {
+    state.targets = s.docs.map((d) => ({ id: d.id, ...d.data() }));
+    render();
+  }, (err) => console.error('targets', err)));
 }
 
 function markReady() {

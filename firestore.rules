@@ -80,6 +80,7 @@ service cloud.firestore {
 
     // ---- public reads ----
     match /schools/{id}       { allow read: if true; }
+    match /catalog/{id}       { allow read: if true; }
     match /rosterPlayers/{id} { allow read: if true; }
     match /clubs/{id}         { allow read: if true; }
     match /schoolStats/{id}   { allow read: if true; }

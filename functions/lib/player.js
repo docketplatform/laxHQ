@@ -128,6 +128,10 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
     out.stats = { season: str(s.season, 'Stats season', { max: 30 }) };
     for (const k of STAT_KEYS) out.stats[k] = num(s[k], k, { min: 0, max: k.endsWith('Pct') ? 100 : 1000 });
   }
+  if (has('athletic')) {
+    const a = input.athletic || {};
+    out.athletic = { varsityStarter: Boolean(a.varsityStarter), allConference: Boolean(a.allConference) };
+  }
   if (has('filmUrl')) out.filmUrl = url(input.filmUrl, 'Film link');
   if (has('regions')) {
     out.regions = (Array.isArray(input.regions) ? input.regions : []).slice(0, 8)
