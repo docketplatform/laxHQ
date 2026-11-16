@@ -15,8 +15,9 @@ const crypto = require('node:crypto');
 admin.initializeApp();
 setGlobalOptions({ region: 'us-central1', maxInstances: 10 });
 
-const db = admin.firestore();
-const { FieldValue, Timestamp } = admin.firestore;
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+
+const db = getFirestore();
 
 const INVITE_TTL_DAYS = 7;
 const MAX_OPEN_INVITES = 10;
