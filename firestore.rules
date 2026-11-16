@@ -1,0 +1,102 @@
+rules_version = '2';
+
+// LaxHQ Firestore rules.
+// - Family membership comes from the custom claim `fid`, so checks cost no reads.
+// - The `pro` claim is set only by Cloud Functions from the family's entitlement.
+// - Free accounts are view-only: every write to a family's player data needs Pro.
+// - Money, entitlement, sync results, alerts and public projections are written only by functions.
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn()    { return request.auth != null; }
+    function inFamily(fid) { return signedIn() && request.auth.token.fid == fid; }
+    function isPro()       { return signedIn() && request.auth.token.pro == true; }
+    function changes()     { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ---- users ----
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && request.auth.uid == uid
+        && !changes().hasAny(['familyId', 'role', 'createdAt']);
+      // create: bootstrapFamily / acceptInvite only
+    }
+
+    // ---- families ----
+    match /families/{fid} {
+      allow read: if inFamily(fid);
+      allow update: if inFamily(fid) && changes().hasOnly(['name']);
+      // create, members, entitlement, Stripe ids: functions only
+
+      match /players/{pid} {
+        allow read: if inFamily(fid);
+        allow update: if inFamily(fid)
+          && isPro()
+          && !changes().hasAny(['cardStats', 'cardSlug', 'teamIds', 'createdAt']);
+        // create: addPlayer callable (enforces entitlement.maxPlayers)
+
+        match /targets/{sid} {
+          allow read: if inFamily(fid);
+          allow update: if inFamily(fid) && isPro();
+          allow create: if inFamily(fid) && isPro() && targetCountBumped(fid, pid, 1);
+          allow delete: if inFamily(fid) && isPro() && targetCountBumped(fid, pid, -1);
+        }
+
+        match /{sub}/{id} {
+          allow read: if inFamily(fid) && sub in ['contacts', 'touches', 'checklist', 'plan'];
+          allow write: if inFamily(fid) && isPro() && sub in ['contacts', 'touches', 'checklist', 'plan'];
+        }
+
+        match /alerts/{id} {
+          allow read: if inFamily(fid);
+          allow update: if inFamily(fid) && changes().hasOnly(['dismissedAt']);
+        }
+      }
+
+      match /expenses/{id} {
+        allow read: if inFamily(fid);
+        allow create, update: if inFamily(fid) && isPro()
+          && request.resource.data.amountCents is int
+          && request.resource.data.amountCents > 0
+          && request.resource.data.amountCents < 10000000
+          && request.resource.data.source in ['manual', 'plan', 'receipt'];   // 'laxhq' and 'partner' rows: functions only
+        allow delete: if inFamily(fid) && isPro()
+          && resource.data.source in ['manual', 'plan', 'receipt'];
+      }
+
+      match /budgets/{season} {
+        allow read: if inFamily(fid);
+        allow write: if inFamily(fid) && isPro();
+      }
+    }
+
+    // Pro school cap, enforced by a counter written in the same batch as the target.
+    // Rules can't count the docs in a subcollection, so the client writes the target
+    // and targetCount +/- 1 together, and getAfter checks the two match.
+    function targetCountBumped(fid, pid, delta) {
+      let path   = /databases/$(db)/documents/families/$(fid)/players/$(pid);
+      let before = get(path).data.get('targetCount', 0);
+      let after  = getAfter(path).data.get('targetCount', 0);
+      return after == before + delta && (delta < 0 || after <= 500);
+    }
+
+    // ---- public reads ----
+    match /schools/{id}       { allow read: if true; }
+    match /rosterPlayers/{id} { allow read: if true; }
+    match /clubs/{id}         { allow read: if true; }
+    match /schoolStats/{id}   { allow read: if true; }
+    match /cards/{slug}       { allow read: if true; }
+    match /config/{id}        { allow read: if true; }
+    match /coaches/{id}       { allow read: if resource.data.status == 'active'; }  // queries must filter status == 'active'
+
+    match /teams/{tid} {
+      allow read: if signedIn() && request.auth.token.fid in resource.data.memberFids;
+      match /events/{e} {
+        allow read: if signedIn()
+          && request.auth.token.fid in get(/databases/$(db)/documents/teams/$(tid)).data.memberFids;
+      }
+    }
+
+    // Everything else is denied: invites, feeds, cardTokens, cardViews, usage,
+    // outcomes, coachSuggestions, billingEvents.
+  }
+}
