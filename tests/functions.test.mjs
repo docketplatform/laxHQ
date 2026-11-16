@@ -2,6 +2,8 @@
 // Functions emulators: npm run test:functions
 import { test, before, after, afterEach } from 'node:test';
 import { startMockAnthropic } from './mock-anthropic.mjs';
+import { startFeedServer, ics } from './feed-server.mjs';
+import { getStorage as adminStorage } from 'firebase-admin/storage';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase/app';
 import {
@@ -14,7 +16,7 @@ import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/
 import { initializeApp as adminInit, getApps as adminApps } from 'firebase-admin/app';
 import { getFirestore as adminDb } from 'firebase-admin/firestore';
 
-if (!adminApps().length) adminInit({ projectId: PROJECT_ID_FOR_ADMIN() });
+if (!adminApps().length) adminInit({ projectId: PROJECT_ID_FOR_ADMIN(), storageBucket: 'demo-laxhq.appspot.com' });
 function PROJECT_ID_FOR_ADMIN() { return 'demo-laxhq'; }
 const adb = adminDb();
 const until = async (fn, ms = 10000) => { const end = Date.now() + ms; for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error('timed out waiting'); await new Promise((r) => setTimeout(r, 200)); } };
@@ -377,4 +379,232 @@ test('daily nudges turn due follow-ups into one alert each', async () => {
   assert.equal((await adb.collection(`${f.base}/alerts`).get()).size, 1, 'no duplicate alert');
   await f.a.call('devRunNudges', { asOf: new Date(Date.now() + 11 * 864e5).toISOString() });
   assert.equal((await adb.collection(`${f.base}/alerts`).get()).size, 2);
+});
+
+// ---------- Phase 5: schedule import, overlaps, expenses ----------
+const Y = new Date().getFullYear() + 1;
+const GAMES = [
+  { uid: 'g1@ts', date: `${Y}-07-24`, time: '0900', title: 'Game vs Express', cal: 'Chesapeake Elite 2029', location: 'Philadelphia PA' },
+  { uid: 'g2@ts', date: `${Y}-07-25`, time: '1300', title: 'Game vs Laxachusetts', cal: 'Chesapeake Elite 2029' },
+  { uid: 'g3@ts', date: `${Y}-06-10`, title: 'Practice', cal: 'Chesapeake Elite 2029' },
+  { uid: 'g4@ts', date: `${Y}-06-17`, title: 'Practice', cal: 'Chesapeake Elite 2029' },
+  { uid: 'g5@ts', date: `${Y}-06-24`, title: 'Practice', cal: 'Chesapeake Elite 2029' },
+];
+const SOCCER = [{ uid: 's1@ts', date: `${Y}-07-24`, title: 'U10 Soccer', cal: 'Sam - U10 Soccer' }];
+let feeds;
+before(async () => {
+  feeds = await startFeedServer({
+    '/parentA.ics': ics([...GAMES, ...SOCCER]),
+    '/parentB.ics': ics(GAMES),
+    '/sameAsA.ics': ics(GAMES),
+  });
+});
+after(async () => { await feeds?.close(); });
+
+async function connect(f, path, calendars) {
+  const c = await f.a.call('connectSchedule', { playerId: f.pid, url: feeds.url(path) });
+  return f.a.call('selectCalendars', { feedId: c.feedId, calendars: calendars || c.calendars.map((x) => x.name) });
+}
+
+test('connecting a feed lists its calendars; picking one creates the team with only those events', async () => {
+  const f = await proPlayer('sched1');
+  const c = await f.a.call('connectSchedule', { playerId: f.pid, url: feeds.url('/parentA.ics') });
+  assert.deepEqual(c.calendars.map((x) => x.name).sort(), ['Chesapeake Elite 2029', 'Sam - U10 Soccer']);
+  await assert.rejects(f.a.call('selectCalendars', { feedId: c.feedId, calendars: [] }), /Pick at least one/);
+  const r = await f.a.call('selectCalendars', { feedId: c.feedId, calendars: ['Chesapeake Elite 2029'] });
+  assert.equal(r.joined, false);
+  assert.equal(r.eventCount, 5);
+  const evs = await adb.collection(`teams/${r.teamId}/events`).get();
+  assert.equal(evs.size, 5);
+  assert.ok(evs.docs.every((d) => d.get('calendar') === 'Chesapeake Elite 2029'));
+  assert.deepEqual((await adb.doc(f.base).get()).get('teamIds'), [r.teamId]);
+  // Family members can read their team; the feed link stays server-only.
+  await f.a.claims();
+  assert.equal((await getDoc(doc(f.a.db, `teams/${r.teamId}`))).get('eventCount'), 5);
+  await assert.rejects(getDoc(doc(f.a.db, `feeds/${c.feedId}`)));
+  await assert.rejects(f.a.call('connectSchedule', { playerId: f.pid, url: feeds.url('/missing.ics') }), /no longer works/);
+});
+
+test('one sync covers the whole team: same link, or a different personal link with the same events', async () => {
+  const f1 = await proPlayer('team1');
+  const first = await connect(f1, '/parentB.ics');
+  const f2 = await proPlayer('team2');
+  const second = await connect(f2, '/parentB.ics');
+  assert.equal(second.teamId, first.teamId);
+  assert.equal(second.joined, true);
+  const f3 = await proPlayer('team3');
+  const third = await connect(f3, '/sameAsA.ics');
+  assert.equal(third.teamId, first.teamId, 'personal link matched by event UIDs');
+  const team = await adb.doc(`teams/${first.teamId}`).get();
+  // (The family from the previous test has the same games, so it is on this team too.)
+  for (const f of [f1, f2, f3]) assert.ok(team.get('memberFids').includes(f.fid));
+  assert.ok(team.get('feedIds').length >= 3, 'one feed record per family');
+});
+
+test('summer events: overlap alerts, planned expenses and the card summer line', async () => {
+  const f = await proPlayer('planner');
+  await connect(f, '/parentB.ics');
+  await adb.doc(`${f.base}/plan/pe1`).set({ kind: 'showcase', title: 'Northeast Elite Weekend', start: `${Y}-07-24`, end: `${Y}-07-26`, status: 'registered', costEstimate: 1400, location: { city: 'Newport', state: 'RI' } });
+  const alert = await until(async () => { const a = await adb.doc(`${f.base}/alerts/overlap_pe1`).get(); return a.exists && a.data(); });
+  assert.match(alert.title, /Northeast Elite Weekend overlaps Chesapeake Elite 2029: Game vs Express on Jul 24 and 1 more/);
+  const exp = await until(async () => { const e = await adb.doc(`families/${f.fid}/expenses/plan_${f.pid}_pe1`).get(); return e.exists && e.data(); });
+  assert.equal(exp.amountCents, 140000);
+  assert.equal(exp.status, 'planned');
+  await until(async () => JSON.stringify((await adb.doc(f.base).get()).get('cardSummer')) === '["Newport"]');
+
+  // Move the event: the clash goes away. Attend it: the expense becomes spent.
+  await adb.doc(`${f.base}/plan/pe1`).update({ start: `${Y}-08-07`, end: `${Y}-08-08`, status: 'attended', actualCost: 1250 });
+  await until(async () => !(await adb.doc(`${f.base}/alerts/overlap_pe1`).get()).exists);
+  await until(async () => (await adb.doc(`families/${f.fid}/expenses/plan_${f.pid}_pe1`).get()).get('amountCents') === 125000);
+  await adb.doc(`${f.base}/plan/pe1`).delete();
+  await until(async () => !(await adb.doc(`families/${f.fid}/expenses/plan_${f.pid}_pe1`).get()).exists);
+});
+
+test('sync updates events, cancels removed ones, fails over, then alerts when every link is dead', async () => {
+  feeds.routes['/syncA.ics'] = ics(GAMES.map((g) => ({ ...g, uid: `s-${g.uid}` })));
+  feeds.routes['/syncB.ics'] = ics(GAMES.map((g) => ({ ...g, uid: `s-${g.uid}` })));
+  const f1 = await proPlayer('sync1');
+  const r = await connect(f1, '/syncA.ics');
+  const f2 = await proPlayer('sync2');
+  await connect(f2, '/syncB.ics');
+
+  // A game is dropped and another moves.
+  feeds.routes['/syncA.ics'] = ics(GAMES.filter((g) => g.uid !== 'g2@ts').map((g) => ({ ...g, uid: `s-${g.uid}`, title: g.uid === 'g1@ts' ? 'Game vs Express (moved)' : g.title })));
+  await f1.a.call('devSyncTeams', {});
+  const evs = await adb.collection(`teams/${r.teamId}/events`).get();
+  assert.ok(evs.docs.some((d) => d.get('title') === 'Game vs Express (moved)'));
+  assert.equal(evs.docs.find((d) => d.get('uid') === 's-g2@ts').get('cancelled'), true);
+
+  // The primary link dies: after repeated failures the team switches to the other family's link.
+  feeds.routes['/syncA.ics'] = { status: 404 };
+  const team = await adb.doc(`teams/${r.teamId}`).get();
+  await adb.doc(`feeds/${team.get('primaryFeedId')}`).update({ consecutiveFailures: 4 });
+  await f1.a.call('devSyncTeams', {});
+  const after1 = await adb.doc(`teams/${r.teamId}`).get();
+  assert.notEqual(after1.get('primaryFeedId'), team.get('primaryFeedId'));
+  assert.equal(after1.get('syncStatus'), 'ok');
+
+  // Both links dead: the team is marked as failing and each player gets an alert.
+  feeds.routes['/syncB.ics'] = { status: 410 };
+  await adb.doc(`feeds/${after1.get('primaryFeedId')}`).update({ consecutiveFailures: 4 });
+  await f1.a.call('devSyncTeams', {});
+  assert.equal((await adb.doc(`teams/${r.teamId}`).get()).get('syncStatus'), 'error');
+  const alert = await adb.doc(`${f1.base}/alerts/sync_${r.teamId}`).get();
+  assert.match(alert.get('title'), /stopped syncing/);
+});
+
+test('scanReceipt reads an uploaded receipt and only the owner family can use it', async () => {
+  const f = await proPlayer('receipts');
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const path = `receipts/${f.fid}/r1.png`;
+  await adminStorage().bucket().file(path).save(png, { contentType: 'image/png' });
+  mock.setReply((body) => {
+    assert.equal(body.messages[0].content[0].type, 'image');
+    return { json: { amount: '$412.36', date: '2026-11-08', payee: 'Hampton Inn', category: 'hotels' } };
+  });
+  const out = await f.a.call('scanReceipt', { path });
+  assert.deepEqual(out, { amount: '412.36', date: '2026-11-08', payee: 'Hampton Inn', category: 'hotels' });
+  const other = await proPlayer('snooper');
+  await assert.rejects(other.a.call('scanReceipt', { path }), /not found/);
+  mock.setReply(() => ({ json: { subject: 'S', body: 'B' } }));
+});
+
+// ---------- Phase 6: billing ----------
+import { createRequire as _cr } from 'node:module';
+import { startMockStripe, subscription } from './mock-stripe.mjs';
+
+const StripeLib = _cr(import.meta.url)('../functions/node_modules/stripe');
+const signer = new (StripeLib.default || StripeLib)('sk_test_emulator');
+const HOOK = 'http://127.0.0.1:5001/demo-laxhq/us-central1/stripeWebhook';
+let stripeMock;
+before(async () => { stripeMock = await startMockStripe(); });
+after(async () => { await stripeMock?.close(); });
+
+let evN = 0;
+async function stripeEvent(type, object, { secret = 'whsec_emulator' } = {}) {
+  const payload = JSON.stringify({ id: `evt_test_${Date.now()}_${evN++}`, object: 'event', type, data: { object } });
+  const header = signer.webhooks.generateTestHeaderString({ payload, secret });
+  const res = await fetch(HOOK, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Stripe-Signature': header }, body: payload });
+  return { status: res.status, body: await res.text(), payload };
+}
+
+test('createCheckout: annual plan with siblings, monthly without; links the Stripe customer', async () => {
+  const a = await newClient('buyer');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  const { url } = await a.call('createCheckout', { interval: 'year', siblings: 2, appOrigin: 'http://127.0.0.1:5000' });
+  assert.match(url, /^https:\/\/checkout\.stripe\.test\//);
+  const session = stripeMock.requests.filter((r) => r.url === '/v1/checkout/sessions').at(-1).body;
+  assert.equal(session.mode, 'subscription');
+  assert.equal(session.client_reference_id, familyId);
+  assert.deepEqual(session.line_items, [{ price: 'price_pro_year', quantity: '1' }, { price: 'price_sibling_year', quantity: '2' }]);
+  assert.equal(session.subscription_data.metadata.fid, familyId);
+  assert.match(session.success_url, /^http:\/\/127\.0\.0\.1:5000\/\?checkout=success/);
+  const cust = (await adb.doc(`families/${familyId}`).get()).get('stripeCustomerId');
+  assert.match(cust, /^cus_test_/);
+
+  await a.call('createCheckout', { interval: 'month', appOrigin: 'http://127.0.0.1:5000' });
+  assert.equal(stripeMock.requests.filter((r) => r.url === '/v1/customers').length >= 1, true);
+  const monthly = stripeMock.requests.filter((r) => r.url === '/v1/checkout/sessions').at(-1).body;
+  assert.equal(monthly.customer, cust, 'the same customer is reused');
+  assert.deepEqual(monthly.line_items, [{ price: 'price_pro_month', quantity: '1' }]);
+  await assert.rejects(a.call('createCheckout', { interval: 'month', siblings: 1, appOrigin: 'http://127.0.0.1:5000' }), /annual plan/);
+  // A family with a customer but no subscription can still open the portal; one with no customer can't.
+  const fresh = await newClient('nocustomer');
+  await fresh.call('bootstrapFamily', {});
+  await assert.rejects(fresh.call('createPortal', { appOrigin: 'http://x.test' }), /no web subscription/);
+});
+
+test('Stripe webhook: checkout → Pro with siblings; renewals log the expense; cancel → Free', async () => {
+  const a = await newClient('subscriber');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.call('createCheckout', { interval: 'year', siblings: 1, appOrigin: 'http://127.0.0.1:5000' });
+  const cust = (await adb.doc(`families/${familyId}`).get()).get('stripeCustomerId');
+  const subId = `sub_${familyId}`;
+  stripeMock.subscriptions[subId] = subscription({ id: subId, customer: cust, fid: familyId, siblings: 1 });
+
+  // A bad signature is rejected.
+  assert.equal((await stripeEvent('customer.subscription.updated', stripeMock.subscriptions[subId], { secret: 'whsec_wrong' })).status, 400);
+
+  const done = await stripeEvent('checkout.session.completed', { id: 'cs_1', object: 'checkout.session', mode: 'subscription', subscription: subId, customer: cust, client_reference_id: familyId });
+  assert.equal(done.status, 200, done.body);
+  const ent = (await adb.doc(`families/${familyId}`).get()).get('entitlement');
+  assert.deepEqual([ent.plan, ent.source, ent.status, ent.interval, ent.maxPlayers], ['pro', 'stripe', 'active', 'year', 2]);
+  assert.equal((await a.claims()).pro, true, 'claims updated');
+
+  // The same event delivered twice is handled once.
+  const again = await fetch(HOOK, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Stripe-Signature': signer.webhooks.generateTestHeaderString({ payload: done.payload, secret: 'whsec_emulator' }) }, body: done.payload });
+  assert.match(await again.text(), /duplicate/);
+
+  // Each paid invoice shows up in the family's recruiting spend.
+  await stripeEvent('invoice.paid', { id: 'in_1', object: 'invoice', customer: cust, amount_paid: 59900, number: 'LAX-0001', created: 1793000000, status_transitions: { paid_at: 1793000000 } });
+  const exp = await adb.doc(`families/${familyId}/expenses/laxhq_in_1`).get();
+  assert.equal(exp.get('amountCents'), 59900);
+  assert.equal(exp.get('source'), 'laxhq');
+  assert.equal(exp.get('category'), 'services');
+
+  // Payment trouble keeps Pro while Stripe retries; cancellation ends it.
+  await stripeEvent('customer.subscription.updated', subscription({ id: subId, customer: cust, status: 'past_due', siblings: 1 }));
+  assert.equal((await adb.doc(`families/${familyId}`).get()).get('entitlement').status, 'past_due');
+  await stripeEvent('customer.subscription.deleted', subscription({ id: subId, customer: cust, status: 'canceled' }));
+  const after = (await adb.doc(`families/${familyId}`).get()).get('entitlement');
+  assert.equal(after.plan, 'free');
+  assert.equal((await a.claims()).pro, false);
+
+  // The portal is available now that there's a customer.
+  const portal = await a.call('createPortal', { appOrigin: 'http://127.0.0.1:5000' });
+  assert.equal(portal.url, 'https://billing.stripe.test/portal');
+});
+
+test('RevenueCat webhook: checks the shared secret; purchase → Pro, expiration → Free', async () => {
+  const a = await newClient('iosbuyer');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  const RC = 'http://127.0.0.1:5001/demo-laxhq/us-central1/revenuecatWebhook';
+  const send = (event, auth = 'Bearer rc_emulator') => fetch(RC, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ event }) });
+  assert.equal((await send({ id: 'x', type: 'INITIAL_PURCHASE', app_user_id: familyId }, 'Bearer nope')).status, 401);
+  const r = await send({ id: `rc1_${familyId}`, type: 'INITIAL_PURCHASE', app_user_id: familyId, product_id: 'laxhq_pro_year', store: 'APP_STORE', expiration_at_ms: Date.now() + 365 * 864e5 });
+  assert.equal(r.status, 200);
+  const ent = (await adb.doc(`families/${familyId}`).get()).get('entitlement');
+  assert.deepEqual([ent.plan, ent.source], ['pro', 'revenuecat']);
+  await send({ id: `rc2_${familyId}`, type: 'EXPIRATION', app_user_id: familyId, expiration_at_ms: Date.now() - 1000 });
+  assert.equal((await adb.doc(`families/${familyId}`).get()).get('entitlement').plan, 'free');
 });

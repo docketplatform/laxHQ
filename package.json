@@ -3,11 +3,11 @@
   "private": true,
   "scripts": {
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-laxhq \"node --test tests/rules.test.mjs\"",
-    "test:functions": "node tests/setup-env.mjs && firebase emulators:exec --only auth,firestore,functions --project demo-laxhq \"node --test tests/functions.test.mjs\"",
+    "test:functions": "node tests/setup-env.mjs && firebase emulators:exec --only auth,firestore,functions,storage --project demo-laxhq \"node --test tests/functions.test.mjs\"",
     "test": "npm run test:unit && npm run test:rules && npm run test:functions && npm run test:e2e",
     "emulators": "node tests/setup-env.mjs && firebase emulators:start --project demo-laxhq",
     "seed": "node scripts/seed-config.mjs && node scripts/seed-schools.mjs",
-    "test:e2e": "node tests/setup-env.mjs && firebase emulators:exec --only auth,firestore,functions,hosting --project demo-laxhq \"node scripts/seed-config.mjs && node scripts/seed-schools.mjs && node tests/e2e.mjs && node tests/e2e/schools.mjs && node tests/e2e/card.mjs && node tests/e2e/coaches.mjs\"",
+    "test:e2e": "node tests/setup-env.mjs && firebase emulators:exec --only auth,firestore,functions,hosting,storage --project demo-laxhq \"node scripts/seed-config.mjs && node scripts/seed-schools.mjs && node tests/e2e.mjs && node tests/e2e/schools.mjs && node tests/e2e/card.mjs && node tests/e2e/coaches.mjs && node tests/e2e/events.mjs && node tests/e2e/billing.mjs\"",
     "test:unit": "node --test tests/unit/*.test.mjs"
   },
   "devDependencies": {

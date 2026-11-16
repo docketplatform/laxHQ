@@ -36,20 +36,21 @@ function alertsHtml(ctx) {
 export default {
   render(ctx) {
     const p = ctx.currentPlayer();
+    const welcome = ctx.state.ui.checkoutMsg ? `<div class="banner info" role="status">${esc(ctx.state.ui.checkoutMsg)}</div>` : '';
     if (!ctx.isPro() || !p) {
       if (ctx.isPro()) {
-        return `<h1>Welcome to LaxHQ Pro</h1>
+        return `${welcome}<h1>Welcome to LaxHQ Pro</h1>
           <div class="card"><h2>Set up your player</h2><p class="muted">Grad year, position, school and club. Your countdown and plan build from it.</p>
           <a class="btn btn-primary" href="#/onboarding">${getDraft() ? 'Finish setting up' : 'Set up my player'}</a></div>`;
       }
-      return sampleViews.home();
+      return welcome + sampleViews.home();
     }
     if (!ctx.state.template || !ctx.state.checklist) return '<p class="muted" role="status">Loading your plan…</p>';
     const plan = buildPlan(ctx.state.template, p, ctx.state.checklist);
     const me = ctx.state.family?.members?.[ctx.state.user.uid]?.name?.split(' ')[0];
     const d1 = plan.daysToContact;
     const d2 = (p.openDivisions || []).includes('D2') ? daysBetween(startOfDay(new Date()), afterSophomoreDate(p.gradYear)) : null;
-    return `${playerSwitcher(ctx)}
+    return `${welcome}${playerSwitcher(ctx)}
       <div><p class="small">${greeting()}${me ? `, ${esc(me)}` : ''}</p>
         <h1>${esc(p.firstName)} · Class of ${p.gradYear}</h1>
         <p class="small">${esc(gradeLabel(plan.grade))} · ${esc(positionLabel(p.sport, p.position))}${p.club?.name ? ` · ${esc(p.club.name)}` : ''}</p></div>

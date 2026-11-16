@@ -12,6 +12,8 @@ import { $, safeStorage, errorText } from './util.js';
 import { views } from './views/index.js';
 import { maybeSubmitDraft } from './views/onboarding.js';
 import { stopCoachWatch } from './views/coaches.js';
+import { stopEventsWatch } from './views/events.js';
+import { stopSpendWatch } from './views/spend.js';
 
 // ---------- state ----------
 export const state = {
@@ -67,7 +69,10 @@ export function selectPlayer(id) {
 
 const ctx = {
   state, call, db, can, isPro, setUi, currentPlayer, selectPlayer, USE_EMULATORS,
-  navigate: (hash) => { if (location.hash === hash) render(); else location.hash = hash; },
+  /** Go to a screen. `flash` = on-screen messages to show there (e.g. { eventsMsg: {...} }). */
+  navigate: (hash, flash = null) => {
+    if (location.hash === hash) { if (flash) state.ui = { ...flash }; render(); } else { state.flash = flash; location.hash = hash; }
+  },
   refreshClaims: async () => { await refreshClaims(); render(); },
   rerender: () => render(),
   signOut: () => signOut(auth),
@@ -125,7 +130,7 @@ function restoreForms(saved) {
 }
 document.addEventListener('input', (e) => { if (e.target.form?.dataset.keep !== undefined) e.target.dataset.dirty = '1'; });
 
-window.addEventListener('hashchange', () => { state.ui = {}; render(); });
+window.addEventListener('hashchange', () => { state.ui = state.flash || {}; state.flash = null; render(); });
 
 // ---------- sign-in ----------
 if (params.get('invite')) safeStorage.set('laxhq.invite', params.get('invite'));
@@ -232,6 +237,12 @@ async function startSession(user) {
     await refreshClaims();
     if (state.pendingName) { await call('updateMyName', { name: state.pendingName }).catch(() => {}); state.pendingName = null; }
     await loadConfig();
+    if (params.get('checkout') === 'success') {
+      state.flash = null;
+      state.ui = { checkoutMsg: 'Welcome to LaxHQ Pro. Your plan unlocks as soon as payment confirms, usually within a few seconds.' };
+      params.delete('checkout');
+      history.replaceState(null, '', location.pathname + (params.toString() ? `?${params}` : '') + location.hash);
+    }
     const fid = state.claims.fid;
     state.playerId = safeStorage.get('laxhq.player');
 
@@ -264,7 +275,7 @@ if (publicCard) {
     .then(() => { if (params.has('print')) setTimeout(() => window.print(), 400); });
 } else onAuthStateChanged(auth, (user) => {
   unsubscribeAll();
-  stopCoachWatch();
+  stopCoachWatch(); stopEventsWatch(); stopSpendWatch();
   if (user) startSession(user);
   else {
     Object.assign(state, { user: null, claims: {}, family: null, players: [], playerId: null, checklist: null, lastEntitlement: null, ready: false, ui: {}, loaded: { family: false, players: false } });

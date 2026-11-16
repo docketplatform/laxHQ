@@ -194,6 +194,7 @@ export default {
   },
   bind(ctx, args) {
     bindSwitcher(ctx);
+    if (!ctx.isPro() || !ctx.currentPlayer()) return; // sample view: nothing to bind
     document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => ctx.setUi('schoolFilter', b.dataset.filter)));
 
     const q = $('school-q');

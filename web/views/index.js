@@ -5,15 +5,8 @@ import onboarding from './onboarding.js';
 import profile from './profile.js';
 import schools from './schools.js';
 import coaches from './coaches.js';
-import { sampleViews } from './sample.js';
-
-/** Placeholder for Pro screens that arrive in later phases. */
-const later = (title, what) => ({
-  render(ctx) {
-    if (!ctx.isPro() || !ctx.currentPlayer()) return sampleViews[title.key]();
-    return `<h1>${title.text}</h1><div class="card"><p class="muted">${what}</p></div>`;
-  },
-});
+import events from './events.js';
+import spend from './spend.js';
 
 export const views = {
   home,
@@ -22,5 +15,6 @@ export const views = {
   profile,
   schools,
   coaches,
-  events: later({ key: 'events', text: 'Summer plan' }, 'Your summer plan arrives in a later build.'),
+  events,
+  spend,
 };

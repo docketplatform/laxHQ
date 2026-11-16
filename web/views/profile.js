@@ -40,6 +40,7 @@ function familyHtml(ctx) {
     ? `Covers ${ent.maxPlayers || 1} player${(ent.maxPlayers || 1) > 1 ? 's' : ''}. You can enter and save your players’ information.`
     : 'Free accounts can look around with a sample family.'}</span></span></div>
       <div id="billing-actions">${billingActions(ctx)}</div>
+      ${ui.billingMsg ? `<p class="${ui.billingMsg.bad ? 'err' : 'small'}" role="status">${esc(ui.billingMsg.text)}</p>` : ''}
       ${ctx.USE_EMULATORS ? `<div class="dev"><b>Emulator only</b><div class="row start wrap">
         <button class="btn btn-ghost" data-dev-plan="pro">Switch to Pro</button>
         <button class="btn btn-ghost" data-dev-plan="pro2">Pro + sibling</button>
@@ -49,10 +50,27 @@ function familyHtml(ctx) {
     <button class="btn btn-ghost" id="sign-out">Sign out</button>`;
 }
 
-/** Billing buttons; replaced by real checkout in Phase 6. */
+/** Billing: Start Pro (Stripe Checkout) or Manage billing (Stripe Customer Portal). */
 export function billingActions(ctx) {
-  if (ctx.isPro()) return '';
-  return '<button class="btn btn-primary" id="start-pro" disabled title="Checkout is coming soon">Start Pro · $500/year (coming soon)</button>';
+  const ent = ctx.state.family?.entitlement || {};
+  const busy = ctx.state.ui.billingBusy;
+  if (ctx.isPro()) {
+    if (ent.source === 'stripe') {
+      return `${ent.status === 'past_due' ? '<p class="err">Your last payment didn’t go through. Update your card to keep Pro.</p>' : ''}
+        <button class="btn btn-ghost" id="manage-billing"${busy ? ' disabled' : ''}>Manage billing</button>
+        <p class="small">Change plan, add siblings, update your card, download invoices or cancel.</p>`;
+    }
+    if (ent.source === 'revenuecat') return '<p class="small">Your subscription is through the App Store. Manage it in your iPhone’s Settings → Apple ID → Subscriptions.</p>';
+    return '';
+  }
+  return `<div class="plans">
+      <div class="planopt"><b>$500 / year</b><span class="small">Best value</span>
+        <div class="field"><label for="siblings">Siblings (+$99/year each)</label><select id="siblings">${[0, 1, 2, 3, 4, 5].map((n) => `<option value="${n}">${n === 0 ? 'None' : n}</option>`).join('')}</select></div>
+        <button class="btn btn-primary" data-checkout="year"${busy ? ' disabled' : ''}>Start Pro yearly</button></div>
+      <div class="planopt"><b>$49 / month</b><span class="small">Cancel any time</span>
+        <button class="btn btn-ghost" data-checkout="month"${busy ? ' disabled' : ''}>Start Pro monthly</button></div>
+    </div>
+    <p class="small">Secure checkout by Stripe. Highlight reels are a separate charge through our editing partner.</p>`;
 }
 
 function bindFamily(ctx) {
@@ -81,6 +99,18 @@ function bindFamily(ctx) {
   $('copy-invite')?.addEventListener('click', async () => {
     const input = $('invite-link'); input.select();
     try { await navigator.clipboard.writeText(input.value); setUi('inviteMsg', { text: 'Copied.' }); } catch { setUi('inviteMsg', { text: 'Select the link and copy it.' }); }
+  });
+  document.querySelectorAll('[data-checkout]').forEach((b) => b.addEventListener('click', async () => {
+    const siblings = b.dataset.checkout === 'year' ? Number($('siblings').value) : 0; // read before the re-render below
+    ctx.state.ui.billingBusy = true; setUi('billingMsg', { text: 'Opening secure checkout…' });
+    try {
+      const { url } = await ctx.call('createCheckout', { interval: b.dataset.checkout, siblings, appOrigin: location.origin });
+      location.assign(url);
+    } catch (e) { ctx.state.ui.billingBusy = false; setUi('billingMsg', { text: errorText(e), bad: true }); }
+  }));
+  $('manage-billing')?.addEventListener('click', async () => {
+    ctx.state.ui.billingBusy = true; setUi('billingMsg', { text: 'Opening billing…' });
+    try { const { url } = await ctx.call('createPortal', { appOrigin: location.origin }); location.assign(url); } catch (e) { ctx.state.ui.billingBusy = false; setUi('billingMsg', { text: errorText(e), bad: true }); }
   });
   document.querySelectorAll('[data-dev-plan]').forEach((b) => b.addEventListener('click', async () => {
     const v = b.dataset.devPlan;

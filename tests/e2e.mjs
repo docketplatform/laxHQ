@@ -55,7 +55,7 @@ try {
   const parentCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await routeSdk(parentCtx);
   const parent = await parentCtx.newPage();
-  parent.on('pageerror', (e) => errors.push(`parent: ${e.message}`));
+  parent.on('pageerror', (e) => errors.push(`parent: ${e.message} ${e.stack}`));
   watch(parent, 'parent');
   await parent.goto(BASE);
   await devSignIn(parent, 'pat@example.com', 'Pat Morrison');
@@ -93,8 +93,8 @@ try {
   await parent.getByText('Jake Morrison').waitFor({ timeout: 10000 });
   assert.equal(await parent.locator('#members > div').count(), 2);
 
-  // Tabs render for a free account.
-  for (const tab of ['schools', 'coaches', 'events']) {
+  // Tabs render for a free account, including deep links into Pro screens.
+  for (const tab of ['schools', 'coaches', 'events', 'schools/tufts-university', 'coaches/add', 'events/club']) {
     await parent.goto(`${BASE}#/${tab}`);
     await parent.getByText('You’re looking at a sample family.').waitFor();
   }

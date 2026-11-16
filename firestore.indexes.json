@@ -71,6 +71,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "feeds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "fid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "teamIds",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

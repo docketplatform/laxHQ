@@ -246,6 +246,7 @@ export default {
   },
   bind(ctx, args) {
     bindSwitcher(ctx);
+    if (!ctx.isPro() || !ctx.currentPlayer()) return; // sample view: nothing to bind
     if (args[0] === 'add') {
       const sel = $('co-school');
       if (sel) {

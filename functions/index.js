@@ -381,3 +381,26 @@ exports.reportCoach = coaches.reportCoach;
 exports.reportOutcome = coaches.reportOutcome;
 exports.dailyNudges = coaches.dailyNudges;
 exports.devRunNudges = coaches.devRunNudges;
+
+// ---------- schedule import, overlaps and expenses (Phase 5) ----------
+const schedule = require('./schedule');
+const expenses = require('./expenses');
+
+schedule.init({ requireProFamily, requireAuth });
+expenses.init({ requireProFamily, requireAuth });
+exports.connectSchedule = schedule.connectSchedule;
+exports.selectCalendars = schedule.selectCalendars;
+exports.disconnectTeam = schedule.disconnectTeam;
+exports.syncTeams = schedule.syncTeams;
+exports.devSyncTeams = schedule.devSyncTeams;
+exports.onPlanWrite = schedule.onPlanWrite;
+exports.scanReceipt = expenses.scanReceipt;
+
+// ---------- billing (Phase 6) ----------
+const billing = require('./billing');
+
+billing.init({ requireAuth, applyEntitlement });
+exports.createCheckout = billing.createCheckout;
+exports.createPortal = billing.createPortal;
+exports.stripeWebhook = billing.stripeWebhook;
+exports.revenuecatWebhook = billing.revenuecatWebhook;

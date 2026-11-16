@@ -49,7 +49,7 @@ export default {
       if (!ctx.isPro()) {
         safeStorage.setJSON(DRAFT_KEY, data);
         msg.className = 'ok';
-        msg.textContent = 'Saved in this browser. Start Pro on the Profile tab and it’s added to your account automatically.';
+        msg.innerHTML = 'Saved in this browser. <a href="#/profile">Start Pro on the Profile tab</a> and it’s added to your account automatically.';
         return;
       }
       if (ctx.state.players.length && !ctx.can('addPlayer')) { msg.className = 'err'; msg.textContent = 'Add a sibling to your plan first.'; return; }
