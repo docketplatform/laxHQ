@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LaxHQ</title>
+<meta name="theme-color" content="#0E1B2C">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E1B2C'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-weight='700' font-size='26' text-anchor='middle' fill='%23FF7A2F'%3EHQ%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E1B2C; --ink2:#1E2F47; --ink3:#26364D; --muted:#4A5668; --line:#E6EAF0;
+  --bg:#F4F6F9; --white:#FFFFFF; --orange:#FF7A2F; --blue:#1D4ED8; --sky:#5AA9FF; --soft:#D5DCE6;
+  --green:#11643C; --red:#B42318;
+  --display:'Space Grotesk','Inter',system-ui,sans-serif; --body:Inter,system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+.app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+.top{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-family:var(--display);font-weight:700;letter-spacing:.04em;font-size:20px}
+.logo span{color:var(--orange)}
+.plan-badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--ink3);color:var(--soft)}
+.plan-badge.pro{background:var(--orange);color:var(--ink)}
+main{flex:1;padding:16px 16px 96px;display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
+h1{font-size:28px;line-height:1.1}
+h2{font-size:20px}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px;color:var(--muted)}
+.card{background:var(--white);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;border:1px solid var(--line)}
+.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dark .small{color:var(--soft)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:14px;border:0;font-weight:700;cursor:pointer;text-decoration:none}
+.btn-primary{background:var(--orange);color:var(--ink)}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid #B8C2D0}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.btn-block{width:100%}
+.banner{background:#FFF1E8;color:#5C2604;border-radius:14px;padding:12px 14px;font-size:14px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.banner b{display:block}
+.chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.c-reach{background:#FFE3D3;color:#8A3306}.c-target{background:#DCE6FF;color:#1A3A9A}.c-likely{background:#D9F4E6;color:#11643C}
+.big{font-family:var(--display);font-weight:700;font-size:52px;line-height:1;color:var(--orange)}
+.bar{height:8px;background:var(--ink3);border-radius:4px}.bar>i{display:block;height:8px;background:var(--orange);border-radius:4px}
+.list{display:flex;flex-direction:column}
+.list>div{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.list>div:first-child{border-top:0}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:600;font-size:14px}
+.field input{min-height:48px;padding:10px 14px;border:1px solid #8A96A8;border-radius:12px;background:#fff;color:var(--ink);width:100%}
+.err{color:var(--red);font-size:14px}
+.ok{color:var(--green);font-size:14px}
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:5;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.tabbar nav{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:48px;justify-content:center;font-size:11px;color:var(--muted);text-decoration:none}
+.tabbar a[aria-current="page"]{color:var(--ink);font-weight:700}
+.tabbar svg{width:22px;height:22px}
+.signin{min-height:100vh;display:flex;flex-direction:column;justify-content:center;gap:18px;padding:24px 16px;max-width:420px;margin:0 auto}
+.signin .logo{font-size:30px;color:var(--ink)}
+.divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+.divider:before,.divider:after{content:"";flex:1;height:1px;background:var(--line)}
+.copy{display:flex;gap:8px}.copy input{flex:1;min-width:0}
+.loading{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="loading" class="loading" role="status">Loading LaxHQ…</div>
+
+<!-- Signed out -->
+<section id="signin" class="signin" hidden>
+  <div class="logo">LAX<span>HQ</span></div>
+  <h1>Your college recruiting game plan.</h1>
+  <p class="muted" id="invite-note" hidden>You’ve been invited to join a family on LaxHQ. Sign in to accept.</p>
+  <button class="btn btn-dark btn-block" id="google">Continue with Google</button>
+  <button class="btn btn-ghost btn-block" id="apple">Continue with Apple</button>
+  <div class="divider">or get a sign-in link by email</div>
+  <form id="email-form" class="field" novalidate>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" required>
+    <button class="btn btn-primary btn-block" type="submit" style="margin-top:6px">Email me a sign-in link</button>
+  </form>
+  <form id="dev-form" class="card" hidden>
+    <b>Emulator sign-in</b>
+    <p class="small">Local testing only. Creates the account if it doesn’t exist.</p>
+    <div class="field"><label for="dev-email">Email</label><input id="dev-email" type="email" value="parent@example.com"></div>
+    <div class="field"><label for="dev-name">Name</label><input id="dev-name" value="Pat Morrison"></div>
+    <button class="btn btn-dark" type="submit">Sign in</button>
+  </form>
+  <p id="signin-msg" role="status" aria-live="polite"></p>
+</section>
+
+<!-- Signed in -->
+<div id="app" class="app" hidden>
+  <header class="top">
+    <div class="logo">LAX<span>HQ</span></div>
+    <span id="plan-badge" class="plan-badge">Free</span>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <div class="tabbar">
+    <nav aria-label="Main">
+      <a href="#/home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+      <a href="#/schools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-5 9 5-9 5z"/><path d="M7 12v5c3 2 7 2 10 0v-5"/></svg>Schools</a>
+      <a href="#/coaches"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Coaches</a>
+      <a href="#/events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Events</a>
+      <a href="#/profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</a>
+    </nav>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {
+  getAuth, connectAuthEmulator, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, OAuthProvider,
+  sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {
+  getFirestore, connectFirestoreEmulator, doc, getDoc, onSnapshot, updateDoc,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import {
+  getFunctions, connectFunctionsEmulator, httpsCallable,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
+
+// ---------- config ----------
+// Real projects: replace with the web app config from the Firebase console
+// (Project settings → Your apps). These values are public by design.
+const FIREBASE_CONFIG = {
+  apiKey: 'REPLACE_ME',
+  authDomain: 'laxhq-dev.firebaseapp.com',
+  projectId: 'laxhq-dev',
+  storageBucket: 'laxhq-dev.appspot.com',
+  appId: 'REPLACE_ME',
+};
+const params = new URLSearchParams(location.search);
+const USE_EMULATORS = ['localhost', '127.0.0.1'].includes(location.hostname) || params.has('emulator');
+const config = USE_EMULATORS
+  ? { apiKey: 'demo-key', authDomain: 'demo-laxhq.firebaseapp.com', projectId: 'demo-laxhq', storageBucket: 'demo-laxhq.appspot.com' }
+  : FIREBASE_CONFIG;
+
+const app = initializeApp(config);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const fns = getFunctions(app, 'us-central1');
+if (USE_EMULATORS) {
+  const host = params.get('emulatorHost') || '127.0.0.1';
+  connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+  connectFirestoreEmulator(db, host, 8080);
+  connectFunctionsEmulator(fns, host, 5001);
+}
+const call = (name, data = {}) => httpsCallable(fns, name)(data).then((r) => r.data);
+
+// ---------- state ----------
+const state = { user: null, claims: {}, family: null, plans: null, unsub: null, lastEntitlement: null, ui: {} };
+// state.ui keeps on-screen messages (and the latest invite link) across live re-renders; cleared on navigation.
+function setUi(key, value) { state.ui[key] = value; route(); }
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const safeStorage = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+
+// Remember an invite code from the link until the user has signed in.
+if (params.get('invite')) safeStorage.set('laxhq.invite', params.get('invite'));
+
+/** True while the family's Pro entitlement is active (from the ID token claim). */
+const isPro = () => state.claims.pro === true;
+
+/** Feature gate shared by every screen. Free accounts are view-only. */
+function can(feature) {
+  const plan = isPro() ? 'pro' : 'free';
+  const limits = (state.plans && state.plans[plan]) || {};
+  switch (feature) {
+    case 'save': return !limits.viewOnly && isPro();
+    case 'invite': return true;
+    case 'rename': return true;
+    default: return Boolean(limits[feature]);
+  }
+}
+
+// ---------- sample family (what free accounts browse) ----------
+const SAMPLE = {
+  family: 'Morrison family', player: 'Jake', gradYear: 2029,
+  readiness: 38, stepsDone: 11, stepsTotal: 29,
+  stats: { schools: 14, coaches: 9, events: 3 },
+  week: [
+    { t: 'Cut fall-ball highlight reel', d: '3 games tagged · aim for 3–4 min', done: false },
+    { t: 'Send intro email · 2 D3 schools', d: 'Athletes may reach out any time', done: false },
+    { t: 'Upload fall transcript', d: 'GPA 3.7 · unlocks academic fit', done: true },
+  ],
+  schools: [
+    { n: 'Johns Hopkins', m: 'D1 · Big Ten · Baltimore, MD', tier: 'Reach' },
+    { n: 'Lafayette', m: 'D1 · Patriot League · Easton, PA', tier: 'Target' },
+    { n: 'Tufts', m: 'D3 · NESCAC · Medford, MA', tier: 'Target' },
+    { n: 'Stevens Institute', m: 'D3 · MAC · Hoboken, NJ', tier: 'Likely' },
+  ],
+  coaches: [
+    { n: 'Tufts', m: 'Recruiting coordinator · replied 2 days ago', s: 'Replied', c: 'c-likely' },
+    { n: 'Lafayette', m: 'Head coach · sent 18 days ago', s: 'Follow up', c: 'c-reach' },
+    { n: 'Stevens Institute', m: 'Assistant coach · sent 6 days ago', s: 'Emailed', c: 'c-target' },
+  ],
+  events: [
+    { d: 'Jun 19', n: 'Mid-Atlantic Summer Showcase', m: 'Bel Air, MD · 2 nights · ~$1,150' },
+    { d: 'Jul 10', n: 'Academic D3 Invitational', m: 'Tarrytown, NY · day trip · ~$290' },
+    { d: 'Jul 24', n: 'Northeast Elite Weekend', m: 'Newport, RI · 3 nights · ~$1,400' },
+  ],
+};
+
+/** Sept 1 of junior year = Sept 1 of (gradYear - 2). Returns whole days from today (local time). */
+function daysUntilContact(gradYear, today = new Date()) {
+  const target = new Date(gradYear - 2, 8, 1);
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((target - start) / 864e5);
+}
+
+// ---------- views ----------
+function sampleBanner() {
+  if (isPro()) return '';
+  return `<div class="banner" role="note"><span><b>You’re looking at a sample family.</b>Start Pro to enter and save your own player’s plan.</span></div>`;
+}
+function proStub(what) {
+  return `<div class="card"><h2>${esc(what)}</h2><p class="muted">Your Pro account is ready. Adding your player and their data arrives in the next build phase.</p></div>`;
+}
+
+const views = {
+  home() {
+    if (isPro()) return `<h1>${esc(state.family?.name || 'Your family')}</h1>${proStub('Add your player')}`;
+    const days = daysUntilContact(SAMPLE.gradYear);
+    return `${sampleBanner()}
+      <div><p class="small">Good morning, ${esc(SAMPLE.family)}</p><h1>${esc(SAMPLE.player)} · Class of ${SAMPLE.gradYear}</h1></div>
+      <div class="card dark">
+        <span class="small" style="letter-spacing:.08em;text-transform:uppercase">D1 coach contact opens</span>
+        <div class="row" style="justify-content:flex-start;align-items:baseline;gap:8px"><span class="big">${Math.max(days, 0)}</span><b>days · Sept 1, ${SAMPLE.gradYear - 2}</b></div>
+        <div class="bar" role="img" aria-label="Readiness ${SAMPLE.readiness}%"><i style="width:${SAMPLE.readiness}%"></i></div>
+        <span class="small">Readiness ${SAMPLE.readiness}% · ${SAMPLE.stepsDone} of ${SAMPLE.stepsTotal} steps done</span>
+      </div>
+      <div class="card"><div class="row" style="text-align:center">
+        <div><b style="font-size:22px">${SAMPLE.stats.schools}</b><p class="small">Target schools</p></div>
+        <div><b style="font-size:22px">${SAMPLE.stats.coaches}</b><p class="small">Coaches emailed</p></div>
+        <div><b style="font-size:22px">${SAMPLE.stats.events}</b><p class="small">Summer events</p></div>
+      </div></div>
+      <div class="card"><h2>This week</h2><div class="list">${SAMPLE.week.map((w) => `
+        <div><span aria-hidden="true" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;${w.done ? 'background:var(--ink)' : 'border:2px solid #9AA6B8'}"></span>
+        <span><b style="${w.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(w.t)}</b><br><span class="small">${esc(w.d)}</span></span></div>`).join('')}
+      </div></div>`;
+  },
+  schools() {
+    if (isPro()) return proStub('Target schools');
+    return `${sampleBanner()}<h1>Target schools</h1>
+      <div class="banner" style="background:#E8EEFF;color:#1A2F6B">Balanced list: 3 reach · 7 target · 4 likely</div>
+      ${SAMPLE.schools.map((s) => `<div class="card"><div class="row"><span><b>${esc(s.n)}</b><br><span class="small">${esc(s.m)}</span></span><span class="chip c-${s.tier.toLowerCase()}">${s.tier}</span></div></div>`).join('')}`;
+  },
+  coaches() {
+    if (isPro()) return proStub('Coach outreach');
+    return `${sampleBanner()}<h1>Coach outreach</h1>
+      <div class="banner" style="background:#FFF8E1;color:#5A4300"><span><b>Rule check</b>D1 coaches can’t start recruiting conversations until Sept 1 of junior year, but players can email them now.</span></div>
+      ${SAMPLE.coaches.map((c) => `<div class="card"><div class="row"><span><b>${esc(c.n)}</b><br><span class="small">${esc(c.m)}</span></span><span class="chip ${c.c}">${c.s}</span></div></div>`).join('')}`;
+  },
+  events() {
+    if (isPro()) return proStub('Summer plan');
+    return `${sampleBanner()}<h1>Summer plan</h1>
+      ${SAMPLE.events.map((e) => `<div class="card"><div class="row" style="justify-content:flex-start"><b style="min-width:56px">${esc(e.d)}</b><span><b>${esc(e.n)}</b><br><span class="small">${esc(e.m)}</span></span></div></div>`).join('')}`;
+  },
+  profile() {
+    const fam = state.family || {};
+    const members = Object.entries(fam.members || {});
+    const me = state.user;
+    const myName = (fam.members && me && fam.members[me.uid]?.name) || '';
+    return `<h1>Family</h1>
+      <div class="card">
+        <div class="field"><label for="my-name">Your name</label>
+          <div class="copy"><input id="my-name" value="${esc(myName)}" maxlength="80" autocomplete="name"><button class="btn btn-ghost" id="save-my-name">Save</button></div></div>
+        <p id="my-name-msg" class="${state.ui.myNameMsg?.bad ? 'err' : 'ok'}" role="status" aria-live="polite">${esc(state.ui.myNameMsg?.text || '')}</p>
+        <div class="field"><label for="fam-name">Family name</label>
+          <div class="copy"><input id="fam-name" value="${esc(fam.name || '')}" maxlength="80"><button class="btn btn-ghost" id="save-name">Save</button></div></div>
+        <p id="name-msg" class="${state.ui.nameMsg?.bad ? 'err' : 'ok'}" role="status" aria-live="polite">${esc(state.ui.nameMsg?.text || '')}</p>
+      </div>
+      <div class="card"><h2>Members</h2><div class="list" id="members">${members.length ? members.map(([uid, m]) => `
+        <div><span style="width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0" aria-hidden="true">${esc((m.name || '?').slice(0, 1).toUpperCase())}</span>
+        <span><b>${esc(m.name)}${uid === me?.uid ? ' (you)' : ''}</b><br><span class="small">${m.role === 'player' ? 'Player' : 'Parent'}</span></span></div>`).join('') : '<p class="small">Just you so far.</p>'}
+      </div></div>
+      <div class="card"><h2>Invite your family</h2>
+        <p class="small">Send a link to a co-parent or your player. Each link works once and expires in 7 days.</p>
+        <div class="row" style="justify-content:flex-start;flex-wrap:wrap">
+          <button class="btn btn-dark" data-invite="parent">Invite a parent</button>
+          <button class="btn btn-ghost" data-invite="player">Invite your player</button>
+        </div>
+        <div id="invite-out" ${state.ui.inviteLink ? '' : 'hidden'} class="field"><label for="invite-link">Invite link</label>
+          <div class="copy"><input id="invite-link" readonly value="${esc(state.ui.inviteLink || '')}"><button class="btn btn-primary" id="copy-invite">Copy</button></div></div>
+        <p id="invite-msg" class="${state.ui.inviteMsg?.bad ? 'err' : 'small'}" role="status" aria-live="polite">${esc(state.ui.inviteMsg?.text || '')}</p>
+      </div>
+      <div class="card"><div class="row"><span><b>Plan: ${isPro() ? 'Pro' : 'Free'}</b><br><span class="small">${isPro() ? 'You can enter and save your player’s information.' : 'Free accounts can look around with a sample family.'}</span></span></div>
+        ${isPro() ? '' : '<button class="btn btn-primary" disabled title="Checkout arrives in Phase 6">Start Pro · $500/year (coming soon)</button>'}
+      </div>
+      <p class="small">Signed in as ${esc(me?.email || me?.displayName || '')}</p>
+      <button class="btn btn-ghost" id="sign-out">Sign out</button>`;
+  },
+};
+
+function bindProfile() {
+  $('save-my-name')?.addEventListener('click', async () => {
+    const name = $('my-name').value.replace(/\s+/g, ' ').trim();
+    if (!name) { setUi('myNameMsg', { text: 'Enter your name.', bad: true }); return; }
+    try { await call('updateMyName', { name }); setUi('myNameMsg', { text: 'Saved.' }); }
+    catch (e) { setUi('myNameMsg', { text: e.message || 'Could not save.', bad: true }); }
+  });
+  $('save-name')?.addEventListener('click', async () => {
+    const name = $('fam-name').value.replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (!name) { setUi('nameMsg', { text: 'Enter a family name.', bad: true }); return; }
+    try { await updateDoc(doc(db, `families/${state.claims.fid}`), { name }); setUi('nameMsg', { text: 'Saved.' }); }
+    catch (e) { setUi('nameMsg', { text: 'Could not save. Try again.', bad: true }); }
+  });
+  document.querySelectorAll('[data-invite]').forEach((b) => b.addEventListener('click', async () => {
+    setUi('inviteMsg', { text: 'Creating link…' });
+    try {
+      const { code } = await call('createInvite', { role: b.dataset.invite });
+      const url = new URL(location.href); url.hash = ''; url.search = ''; url.searchParams.set('invite', code);
+      if (USE_EMULATORS) url.searchParams.set('emulator', '1');
+      state.ui.inviteLink = url.toString();
+      setUi('inviteMsg', { text: `Link for your ${b.dataset.invite} is ready.` });
+    } catch (e) { setUi('inviteMsg', { text: e.message || 'Could not create a link.', bad: true }); }
+  }));
+  $('copy-invite')?.addEventListener('click', async () => {
+    const input = $('invite-link'); input.select();
+    try { await navigator.clipboard.writeText(input.value); setUi('inviteMsg', { text: 'Copied.' }); }
+    catch { setUi('inviteMsg', { text: 'Select the link and copy it.' }); }
+  });
+  $('sign-out')?.addEventListener('click', () => signOut(auth));
+}
+
+function route() {
+  if ($('app').hidden) return;
+  const active = document.activeElement;
+  const typing = active && ['fam-name', 'my-name'].includes(active.id) ? { id: active.id, value: active.value } : null;
+  const name = (location.hash.replace(/^#\//, '') || 'home').split('/')[0];
+  const key = views[name] ? name : 'home';
+  $('view').innerHTML = views[key]();
+  document.querySelectorAll('.tabbar a').forEach((a) => {
+    if (a.getAttribute('href') === `#/${key}`) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  if (key === 'profile') {
+    bindProfile();
+    if (typing) { $(typing.id).value = typing.value; $(typing.id).focus(); }
+  }
+  $('plan-badge').textContent = isPro() ? 'Pro' : 'Free';
+  $('plan-badge').classList.toggle('pro', isPro());
+}
+window.addEventListener('hashchange', () => { state.ui = {}; route(); });
+
+// ---------- sign-in ----------
+function showSignin() {
+  $('loading').hidden = true; $('app').hidden = true; $('signin').hidden = false;
+  $('invite-note').hidden = !safeStorage.get('laxhq.invite');
+  $('dev-form').hidden = !USE_EMULATORS;
+}
+function signinMsg(text, bad) { const m = $('signin-msg'); m.className = bad ? 'err' : 'ok'; m.textContent = text; }
+
+$('google').addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => signinMsg(e.message, true)));
+$('apple').addEventListener('click', () => {
+  const p = new OAuthProvider('apple.com'); p.addScope('email'); p.addScope('name');
+  signInWithPopup(auth, p).catch((e) => signinMsg(e.message, true));
+});
+$('email-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('email').value.trim();
+  if (!/^\S+@\S+\.\S+$/.test(email)) { signinMsg('Enter a valid email address.', true); return; }
+  try {
+    await sendSignInLinkToEmail(auth, email, { url: location.href.split('#')[0], handleCodeInApp: true });
+    safeStorage.set('laxhq.emailForSignIn', email);
+    signinMsg(`Check ${email} for your sign-in link.`);
+  } catch (err) { signinMsg(err.message, true); }
+});
+$('dev-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('dev-email').value.trim(); const name = $('dev-name').value.trim();
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, 'emulator-only').catch((err) => {
+      if (err.code === 'auth/email-already-in-use') return signInWithEmailAndPassword(auth, email, 'emulator-only');
+      throw err;
+    });
+    if (name && !cred.user.displayName) { state.pendingName = name; await updateProfile(cred.user, { displayName: name }); }
+  } catch (err) { signinMsg(err.message, true); }
+});
+
+// Finish an email-link sign-in when the user returns from their inbox.
+if (isSignInWithEmailLink(auth, location.href)) {
+  let email = safeStorage.get('laxhq.emailForSignIn');
+  if (!email) email = window.prompt('Confirm your email to finish signing in');
+  if (email) {
+    signInWithEmailLink(auth, email, location.href)
+      .then(() => { safeStorage.del('laxhq.emailForSignIn'); history.replaceState(null, '', location.pathname + (params.has('emulator') ? '?emulator=1' : '')); })
+      .catch((e) => signinMsg(e.message, true));
+  }
+}
+
+// ---------- session ----------
+async function refreshClaims() {
+  const res = await state.user.getIdTokenResult(true);
+  state.claims = res.claims;
+}
+
+async function startSession(user) {
+  state.user = user;
+  $('signin').hidden = true; $('loading').hidden = false;
+  try {
+    const invite = safeStorage.get('laxhq.invite');
+    if (invite) {
+      try { await call('acceptInvite', { code: invite }); }
+      catch (e) { alert(`Couldn’t join with that invite: ${e.message}`); await call('bootstrapFamily'); }
+      safeStorage.del('laxhq.invite');
+      if (params.has('invite')) { params.delete('invite'); history.replaceState(null, '', location.pathname + (params.toString() ? `?${params}` : '') + location.hash); }
+    } else {
+      await call('bootstrapFamily');
+    }
+    await refreshClaims();
+    if (state.pendingName) { await call('updateMyName', { name: state.pendingName }).catch(() => {}); state.pendingName = null; }
+    const plansSnap = await getDoc(doc(db, 'config/plans')).catch(() => null);
+    state.plans = plansSnap?.exists() ? plansSnap.data() : null;
+
+    if (state.unsub) state.unsub();
+    state.unsub = onSnapshot(doc(db, `families/${state.claims.fid}`), async (snap) => {
+      state.family = snap.data() || null;
+      const ent = JSON.stringify(state.family?.entitlement || null);
+      if (state.lastEntitlement !== null && ent !== state.lastEntitlement) await refreshClaims(); // plan changed → new claims
+      state.lastEntitlement = ent;
+      $('loading').hidden = true; $('app').hidden = false;
+      route();
+    }, (err) => { console.error(err); signinMsg('Could not load your family. Try signing in again.', true); });
+  } catch (e) {
+    console.error(e);
+    $('loading').hidden = true; showSignin(); signinMsg(e.message || 'Something went wrong signing in.', true);
+  }
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (state.unsub) { state.unsub(); state.unsub = null; }
+  if (user) startSession(user);
+  else { Object.assign(state, { user: null, claims: {}, family: null, lastEntitlement: null }); showSignin(); }
+});
+
+// Exposed for automated tests only.
+window.__laxhq = { state, can, daysUntilContact };
+</script>
+</body>
+</html>

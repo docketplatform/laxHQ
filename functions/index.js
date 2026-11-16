@@ -67,6 +67,13 @@ function newInviteCode() {
   return code;
 }
 
+/** Display name for the family members list: the account name, else the email's first part. */
+function memberName(token) {
+  if (token.name) return String(token.name).slice(0, 80);
+  if (token.email) return String(token.email).split('@')[0].slice(0, 80);
+  return 'Member';
+}
+
 function cleanName(value, fallback) {
   const s = (typeof value === 'string' ? value : '').replace(/\s+/g, ' ').trim().slice(0, 80);
   return s || fallback;
@@ -94,6 +101,7 @@ exports.bootstrapFamily = onCall(async (req) => {
     tx.set(famRef, {
       name: cleanName(req.data && req.data.familyName, fallbackName),
       memberUids: [uid],
+      members: { [uid]: { name: memberName(token), role: 'parent' } },
       ownerUid: uid,
       playerCount: 0,
       entitlement: { ...FREE_ENTITLEMENT },
@@ -192,7 +200,10 @@ exports.acceptInvite = onCall(async (req) => {
       tx.delete(curRef);
     }
 
-    tx.update(targetRef, { memberUids: FieldValue.arrayUnion(uid) });
+    tx.update(targetRef, {
+      memberUids: FieldValue.arrayUnion(uid),
+      [`members.${uid}`]: { name: memberName(token), role: invite.role },
+    });
     tx.set(userRef, {
       displayName: token.name || null,
       email: token.email || null,
@@ -207,6 +218,25 @@ exports.acceptInvite = onCall(async (req) => {
 
   const claims = await setClaims(uid, fid);
   return { familyId: fid, claims };
+});
+
+/**
+ * updateMyName — set your display name on your user doc and in your family's members list.
+ * data: { name }
+ */
+exports.updateMyName = onCall(async (req) => {
+  const uid = requireAuth(req);
+  const name = cleanName(req.data && req.data.name, '');
+  if (!name) throw new HttpsError('invalid-argument', 'Enter your name.');
+  const userRef = db.doc(`users/${uid}`);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) throw new HttpsError('failed-precondition', 'Set up your family first.');
+  const fid = userSnap.get('familyId');
+  const batch = db.batch();
+  batch.update(userRef, { displayName: name });
+  if (fid) batch.update(db.doc(`families/${fid}`), { [`members.${uid}.name`]: name });
+  await batch.commit();
+  return { name };
 });
 
 /** refreshMyClaims — re-read the family's entitlement and update this user's claims. */

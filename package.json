@@ -4,9 +4,10 @@
   "scripts": {
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-laxhq \"node --test tests/rules.test.mjs\"",
     "test:functions": "firebase emulators:exec --only auth,firestore,functions --project demo-laxhq \"node --test tests/functions.test.mjs\"",
-    "test": "npm run test:rules && npm run test:functions",
+    "test": "npm run test:rules && npm run test:functions && npm run test:e2e",
     "emulators": "firebase emulators:start --project demo-laxhq",
-    "seed": "node scripts/seed-config.mjs"
+    "seed": "node scripts/seed-config.mjs",
+    "test:e2e": "firebase emulators:exec --only auth,firestore,functions,hosting --project demo-laxhq \"node scripts/seed-config.mjs && node tests/e2e.mjs\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.4",

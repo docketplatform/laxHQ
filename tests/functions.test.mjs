@@ -1,6 +1,6 @@
 // End-to-end tests for the Phase 0 callables, run against the Auth, Firestore and
 // Functions emulators: npm run test:functions
-import { test, before } from 'node:test';
+import { test, before, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase/app';
 import {
@@ -13,6 +13,7 @@ import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/
 
 const PROJECT = 'demo-laxhq';
 let n = 0;
+const open = new Set();
 
 /** A fresh signed-in client with its own app instance. */
 async function newClient(label) {
@@ -27,9 +28,16 @@ async function newClient(label) {
   await createUserWithEmailAndPassword(auth, email, 'password123');
   const call = (name, data) => httpsCallable(fns, name)(data).then((r) => r.data);
   const claims = async () => (await auth.currentUser.getIdTokenResult(true)).claims;
-  const close = async () => { await terminate(db); await signOut(auth); await deleteApp(app); };
+  const close = async () => {
+    if (!open.has(close)) return;
+    open.delete(close);
+    await terminate(db).catch(() => {}); await signOut(auth).catch(() => {}); await deleteApp(app).catch(() => {});
+  };
+  open.add(close);
   return { app, auth, db, call, claims, close };
 }
+
+afterEach(async () => { await Promise.all([...open].map((c) => c())); });
 
 before(async () => {
   // Fail fast with a clear message if the emulators are not running.
@@ -85,6 +93,7 @@ test('invite flow: a player joins the parent’s family and gets its claims', as
 
   const fam = await getDoc(doc(player.db, `families/${familyId}`));
   assert.deepEqual([...fam.get('memberUids')].sort(), [parent.auth.currentUser.uid, player.auth.currentUser.uid].sort());
+  assert.equal(fam.get('members')[player.auth.currentUser.uid].role, 'player');
   const me = await getDoc(doc(player.db, `users/${player.auth.currentUser.uid}`));
   assert.equal(me.get('role'), 'player');
 
@@ -123,5 +132,16 @@ test('bad input and signed-out calls are rejected', async () => {
   await assert.rejects(a.call('acceptInvite', { code: 'ZZZZZZZZZZ' }), /not found/);
   await signOut(a.auth);
   await assert.rejects(a.call('bootstrapFamily', {}), /Sign in first/);
+  await a.close();
+});
+
+test('updateMyName updates the user doc and the family members list', async () => {
+  const a = await newClient('namer');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.call('updateMyName', { name: '  Pat   Morrison ' });
+  await a.claims();
+  const fam = await getDoc(doc(a.db, `families/${familyId}`));
+  assert.equal(fam.get('members')[a.auth.currentUser.uid].name, 'Pat Morrison');
+  await assert.rejects(a.call('updateMyName', { name: '   ' }), /Enter your name/);
   await a.close();
 });
