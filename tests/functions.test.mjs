@@ -608,3 +608,58 @@ test('RevenueCat webhook: checks the shared secret; purchase → Pro, expiration
   await send({ id: `rc2_${familyId}`, type: 'EXPIRATION', app_user_id: familyId, expiration_at_ms: Date.now() - 1000 });
   assert.equal((await adb.doc(`families/${familyId}`).get()).get('entitlement').plan, 'free');
 });
+
+// ---------- Phase 7: account deletion ----------
+import { getAuth as adminAuth } from 'firebase-admin/auth';
+
+test('deleteAccount: a member leaves; the owner deletes the family and everything in it', async () => {
+  const owner = await newClient('owner');
+  const { familyId: fid } = await owner.call('bootstrapFamily', {});
+  const { code } = await owner.call('createInvite', { role: 'player' });
+  const kid = await newClient('kid');
+  await kid.call('acceptInvite', { code });
+  const parent2 = await newClient('parent2');
+  const { code: c2 } = await owner.call('createInvite', { role: 'parent' });
+  await parent2.call('acceptInvite', { code: c2 });
+
+  await owner.call('devSetPlan', { plan: 'pro' });
+  await owner.claims();
+  await owner.call('createCheckout', { interval: 'year', appOrigin: 'http://127.0.0.1:5000' });
+  const { playerId: pid } = await owner.call('addPlayer', JAKE);
+  await owner.call('updatePlayer', { playerId: pid, cardPublished: true });
+  const slug = (await adb.doc(`families/${fid}/players/${pid}`).get()).get('cardSlug');
+  await until(async () => (await adb.doc(`cards/${slug}`).get()).exists);
+  await adb.doc(`families/${fid}/expenses/e1`).set({ amountCents: 100, source: 'manual' });
+  await adminStorage().bucket().file(`receipts/${fid}/r.png`).save(Buffer.from('x'), { contentType: 'image/png' });
+  const f = { a: owner, fid, pid, base: `families/${fid}/players/${pid}` };
+  feeds.routes['/del.ics'] = ics(GAMES.map((g) => ({ ...g, uid: `del-${g.uid}` })));
+  const team = await connect(f, '/del.ics');
+
+  // The player leaves: only their login and membership go.
+  const kidUid = kid.auth.currentUser.uid;
+  assert.equal((await kid.call('deleteAccount', { scope: 'me' })).deleted, 'me');
+  await assert.rejects(adminAuth().getUser(kidUid));
+  const fam = await adb.doc(`families/${fid}`).get();
+  assert.ok(!fam.get('memberUids').includes(kidUid));
+  assert.equal(fam.get('members')[kidUid], undefined);
+
+  // A non-owner can't delete the family.
+  await assert.rejects(parent2.call('deleteAccount', { scope: 'family' }), /Only the parent who set up/);
+
+  // The owner deletes everything.
+  const before = stripeMock.requests.length;
+  assert.equal((await owner.call('deleteAccount', { scope: 'family' })).deleted, 'family');
+  assert.equal((await adb.doc(`families/${fid}`).get()).exists, false);
+  assert.equal((await adb.collection(`families/${fid}/players`).get()).size, 0);
+  assert.equal((await adb.collection(`families/${fid}/expenses`).get()).size, 0);
+  assert.equal((await adb.doc(`cards/${slug}`).get()).exists, false);
+  assert.equal((await adb.doc(`cardSlugs/${slug}`).get()).exists, false);
+  const [files] = await adminStorage().bucket().getFiles({ prefix: `receipts/${fid}/` });
+  assert.equal(files.length, 0);
+  assert.ok(!(await adb.doc(`teams/${team.teamId}`).get()).get('memberFids').includes(fid));
+  assert.ok(stripeMock.requests.slice(before).some((r) => r.method === 'DELETE' && r.url.startsWith('/v1/customers/')), 'Stripe customer deleted (cancels the subscription)');
+  assert.equal((await adb.doc(`users/${parent2.auth.currentUser.uid}`).get()).get('familyId'), null, 'other members are unlinked');
+  // The unlinked parent starts fresh next time.
+  const fresh = await parent2.call('bootstrapFamily', {});
+  assert.equal(fresh.created, true, 'a new, empty family');
+});

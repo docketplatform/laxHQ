@@ -29,6 +29,15 @@ export const fns = getFunctions(app, 'us-central1');
 export const storage = getStorage(app);
 export const PROJECT_ID = config.projectId;
 
+// App Check (reCAPTCHA Enterprise). Add the site key from Firebase console → App Check, then set
+// ENFORCE_APP_CHECK=true for Cloud Functions. Skipped on the emulators.
+const APP_CHECK_SITE_KEY = '';
+if (APP_CHECK_SITE_KEY && !USE_EMULATORS) {
+  import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js').then(({ initializeAppCheck, ReCaptchaEnterpriseProvider }) => {
+    initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
+  }).catch((e) => console.error('App Check', e));
+}
+
 if (USE_EMULATORS) {
   const host = params.get('emulatorHost') || '127.0.0.1';
   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });

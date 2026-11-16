@@ -31,6 +31,10 @@ const FREE_ENTITLEMENT = Object.freeze({
 
 function requireAuth(req) {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  // App Check: on once the web app registers its site key (set ENFORCE_APP_CHECK=true in .env).
+  if (process.env.ENFORCE_APP_CHECK === 'true' && !req.app) {
+    throw new HttpsError('failed-precondition', 'Please update the app and try again.');
+  }
   return req.auth.uid;
 }
 
@@ -404,3 +408,10 @@ exports.createCheckout = billing.createCheckout;
 exports.createPortal = billing.createPortal;
 exports.stripeWebhook = billing.stripeWebhook;
 exports.revenuecatWebhook = billing.revenuecatWebhook;
+
+// ---------- account deletion and backups (Phase 7) ----------
+const account = require('./account');
+
+account.init({ requireAuth, stripeClient: billing.stripeClient });
+exports.deleteAccount = account.deleteAccount;
+exports.backupFirestore = account.backupFirestore;

@@ -246,6 +246,6 @@ const revenuecatWebhook = onRequest({ secrets: [REVENUECAT_WEBHOOK_AUTH] }, asyn
 });
 
 module.exports = {
-  init, createCheckout, createPortal, stripeWebhook, revenuecatWebhook,
+  init, createCheckout, createPortal, stripeWebhook, revenuecatWebhook, stripeClient: stripe,
   stripeState, pickEntitlement, revenuecatState, resolveEntitlement,
 };

@@ -108,6 +108,8 @@ legend{padding:0;margin-bottom:6px}
 .seg button{min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;font-weight:600;cursor:pointer;color:var(--muted)}
 .seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,27,44,.12)}
 a{color:var(--blue)}
+.btn.danger{color:var(--red);border-color:#F1B5AE}
+.links a{font-weight:600}
 .plans{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:420px){.plans{grid-template-columns:1fr}}
 .planopt{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -200,6 +202,7 @@ button,input,select,textarea{font:inherit}
     <button class="btn btn-dark" type="submit">Sign in</button>
   </form>
   <p id="signin-msg" role="status" aria-live="polite"></p>
+  <p class="small links">By continuing you agree to the <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>. <a href="/help.html">Help</a></p>
 </section>
 
 <!-- Signed in -->

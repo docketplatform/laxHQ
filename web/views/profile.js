@@ -47,7 +47,17 @@ function familyHtml(ctx) {
         <button class="btn btn-ghost" data-dev-plan="free">Switch to Free</button></div></div>` : ''}
     </div>
     <p class="small">Signed in as ${esc(me.email || me.displayName || '')}</p>
-    <button class="btn btn-ghost" id="sign-out">Sign out</button>`;
+    <button class="btn btn-ghost" id="sign-out">Sign out</button>
+    <section class="card" id="danger">
+      <h2>Delete account</h2>
+      ${fam.ownerUid === me.uid ? `<p class="small">Deleting the family removes every player, plan, school list, coach, card, expense and receipt, cancels a web subscription, and can’t be undone. Other members keep their logins and start fresh.</p>
+        <button class="btn btn-ghost danger" data-delete="family">Delete the family and all its data</button>` : ''}
+      ${members.length > 1 ? `<p class="small">Or remove only your own login and leave the family. Everything else stays.</p>
+        <button class="btn btn-ghost danger" data-delete="me">Delete my login only</button>`
+    : (fam.ownerUid === me.uid ? '' : '<button class="btn btn-ghost danger" data-delete="me">Delete my account</button>')}
+      <p id="delete-msg" class="${ui.deleteMsg?.bad ? 'err' : 'small'}" role="status" aria-live="polite">${esc(ui.deleteMsg?.text || '')}</p>
+    </section>
+    <p class="small links"><a href="/help.html">Help</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></p>`;
 }
 
 /** Billing: Start Pro (Stripe Checkout) or Manage billing (Stripe Customer Portal). */
@@ -118,6 +128,18 @@ function bindFamily(ctx) {
     await ctx.refreshClaims();
   }));
   $('sign-out')?.addEventListener('click', () => ctx.signOut());
+  document.querySelectorAll('[data-delete]').forEach((b) => b.addEventListener('click', async () => {
+    const family = b.dataset.delete === 'family';
+    const typed = prompt(family
+      ? 'This deletes your whole family’s LaxHQ data and can’t be undone. Type DELETE to confirm.'
+      : 'This deletes your login. Type DELETE to confirm.');
+    if (typed !== 'DELETE') { setUi('deleteMsg', { text: 'Nothing was deleted.' }); return; }
+    setUi('deleteMsg', { text: 'Deleting…' });
+    try {
+      await ctx.call('deleteAccount', { scope: family ? 'family' : 'me' });
+      await ctx.signOut();
+    } catch (e) { setUi('deleteMsg', { text: errorText(e), bad: true }); }
+  }));
 }
 
 export default {

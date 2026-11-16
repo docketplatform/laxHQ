@@ -30,6 +30,8 @@ export function startMockStripe() {
       if (req.method === 'POST' && req.url === '/v1/customers') return send(200, { id: `cus_test_${n}`, object: 'customer', email: body.email || null, metadata: body.metadata || {} });
       if (req.method === 'POST' && req.url === '/v1/checkout/sessions') return send(200, { id: `cs_test_${n}`, object: 'checkout.session', url: `https://checkout.stripe.test/cs_test_${n}` });
       if (req.method === 'POST' && req.url === '/v1/billing_portal/sessions') return send(200, { id: `bps_${n}`, object: 'billing_portal.session', url: 'https://billing.stripe.test/portal' });
+      const del = req.url.match(/^\/v1\/customers\/([^/?]+)/);
+      if (req.method === 'DELETE' && del) return send(200, { id: del[1], object: 'customer', deleted: true });
       const m = req.url.match(/^\/v1\/subscriptions\/([^/?]+)/);
       if (req.method === 'GET' && m) return subscriptions[m[1]] ? send(200, subscriptions[m[1]]) : send(404, { error: { type: 'invalid_request_error', message: 'No such subscription' } });
       return send(404, { error: { type: 'invalid_request_error', message: `Unhandled ${req.method} ${req.url}` } });

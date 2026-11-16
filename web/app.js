@@ -73,7 +73,7 @@ const ctx = {
   navigate: (hash, flash = null) => {
     if (location.hash === hash) { if (flash) state.ui = { ...flash }; render(); } else { state.flash = flash; location.hash = hash; }
   },
-  refreshClaims: async () => { await refreshClaims(); render(); },
+  refreshClaims: async () => { try { await refreshClaims(); } catch { signOut(auth).catch(() => {}); return; } render(); },
   rerender: () => render(),
   signOut: () => signOut(auth),
 };
@@ -249,7 +249,10 @@ async function startSession(user) {
     subscribe('family', onSnapshot(doc(db, `families/${fid}`), async (snap) => {
       state.family = snap.data() || null;
       const ent = JSON.stringify(state.family?.entitlement || null);
-      if (state.lastEntitlement !== null && ent !== state.lastEntitlement) await refreshClaims(); // plan changed → new claims
+      if (state.lastEntitlement !== null && ent !== state.lastEntitlement) {
+        // Plan changed → new claims. If the login itself is gone (deleted, revoked), sign out cleanly.
+        try { await refreshClaims(); } catch (e) { console.warn('token refresh failed', e.code); signOut(auth).catch(() => {}); return; }
+      }
       state.lastEntitlement = ent;
       state.loaded.family = true;
       markReady();

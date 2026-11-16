@@ -32,7 +32,8 @@ export async function launch() {
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
     p.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/ERR_FAILED/.test(m.text())) logs.push(`${name} ${m.type()}: ${m.text()}`); });
-    p.on('dialog', (d) => d.accept());
+    // Confirms are accepted; prompts are answered with page.promptAnswer (set it in a scenario).
+    p.on('dialog', (d) => d.accept(d.type() === 'prompt' ? (p.promptAnswer ?? '') : undefined));
     return p;
   }
   return { browser, page, errors, close: () => browser.close() };
