@@ -234,8 +234,9 @@ test('touches live under the player; pro writes them', async () => {
 
 test('billing records and webhook logs are server-only', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
-    await setDoc(doc(ctx.firestore(), `families/${FID}/billing/stripe`), { active: true });
-    await setDoc(doc(ctx.firestore(), 'billingEvents/evt_1'), { type: 'x' });
+    const db = ctx.firestore();
+    await setDoc(doc(db, `families/${FID}/billing/stripe`), { active: true });
+    await setDoc(doc(db, 'billingEvents/evt_1'), { type: 'x' });
   });
   await assertFails(getDoc(doc(pro(), `families/${FID}/billing/stripe`)));
   await assertFails(setDoc(doc(pro(), `families/${FID}/billing/stripe`), { active: true }));
