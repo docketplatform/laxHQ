@@ -22,8 +22,8 @@ export async function launch() {
   const browser = await chromium.launch();
   const errors = []; const logs = [];
   process.on('exit', (code) => { if (code) console.log(`BROWSER CONSOLE:\n${logs.slice(-25).join('\n')}`); });
-  async function page(name, viewport = { width: 390, height: 844 }) {
-    const ctx = await browser.newContext({ viewport });
+  async function page(name, viewport = { width: 390, height: 844 }, opts = {}) {
+    const ctx = await browser.newContext({ viewport, ...opts });
     await ctx.route('https://www.gstatic.com/firebasejs/10.14.1/*', (route) => {
       const file = new URL(route.request().url()).pathname.split('/').pop();
       try { route.fulfill({ status: 200, contentType: 'text/javascript', body: readFileSync(`node_modules/firebase/${file}`, 'utf8') }); } catch { route.abort(); }
@@ -83,3 +83,5 @@ export async function uidFor(email) {
   });
   return (await res.json()).users?.[0]?.localId;
 }
+
+export const DESKTOP_CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';

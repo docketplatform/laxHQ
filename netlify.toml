@@ -1,0 +1,22 @@
+# Netlify serves the web app from web/. Cloud Functions are reached through /api/*.
+# Replace PROJECT_ID with your Firebase project id (e.g. laxhq-prod).
+[build]
+  publish = "web"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://us-central1-PROJECT_ID.cloudfunctions.net/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/c/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"

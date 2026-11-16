@@ -248,7 +248,12 @@ async function startSession(user) {
   }
 }
 
-onAuthStateChanged(auth, (user) => {
+// Public recruiting card: /c/<slug>. No sign-in, no app shell.
+const publicCard = location.pathname.match(/^\/c\/([a-z0-9]{4,16})\/?$/);
+if (publicCard) {
+  import('./views/card.js').then((m) => m.renderPublicCard(publicCard[1]))
+    .then(() => { if (params.has('print')) setTimeout(() => window.print(), 400); });
+} else onAuthStateChanged(auth, (user) => {
   unsubscribeAll();
   if (user) startSession(user);
   else {

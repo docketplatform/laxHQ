@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LaxHQ</title>
 <meta name="theme-color" content="#0E1B2C">
+<meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E1B2C'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-weight='700' font-size='26' text-anchor='middle' fill='%23FF7A2F'%3EHQ%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -107,6 +108,32 @@ legend{padding:0;margin-bottom:6px}
 .seg button{min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;font-weight:600;cursor:pointer;color:var(--muted)}
 .seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,27,44,.12)}
 a{color:var(--blue)}
+body.public,#public{background:#E9EDF3}
+#public{min-height:100vh}
+.pwrap{max-width:480px;margin:0 auto;padding:24px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.dark-logo{color:var(--ink)}
+.rcard{background:var(--ink);color:#fff;border-radius:24px;overflow:hidden;box-shadow:0 20px 40px rgba(14,27,44,.18)}
+.rfilm{height:180px;background:var(--ink2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#B9C4D4;text-decoration:none;font-weight:600}
+.rfilm .play{width:60px;height:60px;border-radius:50%;background:var(--orange) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230E1B2C'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E") 55% center/26px no-repeat}
+.rfilm.none{height:110px}
+.rbody{padding:20px;display:flex;flex-direction:column;gap:16px}
+.rname{font-size:28px;color:#fff}
+.rmeta{color:var(--soft);font-size:14px;margin:0}
+.rjersey{font-family:var(--display);font-size:34px;font-weight:700;color:var(--orange)}
+.rstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px}
+.cs{background:var(--ink2);border-radius:12px;padding:10px 6px;text-align:center;display:flex;flex-direction:column}
+.cs b{font-family:var(--display);font-size:20px}.cs span{font-size:12px;color:var(--soft)}
+.rfacts{margin:0;display:flex;flex-direction:column;gap:8px}
+.rfacts div{display:flex;gap:10px;font-size:14px}.rfacts dt{min-width:96px;color:var(--soft)}.rfacts dd{margin:0}
+.rfacts a{color:#9CC8FF}
+.rself{font-size:11px;color:var(--soft)}
+.pfoot{text-align:center;font-size:13px;color:var(--muted)}
+@media print{
+  body{background:#fff}.pfoot{display:none}
+  .rcard{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rfilm .play{display:none}
+}
+
 .link-card{text-decoration:none;color:inherit}
 .link-card:hover{border-color:#B8C2D0}
 .fits{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -121,6 +148,8 @@ button,input,select,textarea{font:inherit}
 </head>
 <body>
 <div id="loading" class="loading" role="status">Loading LaxHQ…</div>
+
+<main id="public" hidden></main>
 
 <!-- Signed out -->
 <section id="signin" class="signin" hidden>
@@ -163,6 +192,6 @@ button,input,select,textarea{font:inherit}
   </div>
 </div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

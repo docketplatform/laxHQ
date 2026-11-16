@@ -2,6 +2,7 @@
 import { $, esc, formToObject, errorText } from '../util.js';
 import { playerFormHtml, cleanPlayerInput, quickCheck, bindSportSwitch } from './playerForm.js';
 import { playerSwitcher, bindSwitcher } from './home.js';
+import { cardSectionHtml, bindCardSection } from './card.js';
 
 function familyHtml(ctx) {
   const { state } = ctx;
@@ -98,6 +99,7 @@ export default {
       playerPart = `${playerSwitcher(ctx)}
         <div class="row"><h1>${esc(p.firstName)}’s profile</h1>${ctx.can('addPlayer') || ctx.state.players.length > 0 ? '<a class="btn btn-ghost btn-sm" href="#/onboarding">Add a sibling</a>' : ''}</div>
         ${msg ? `<p class="${msg.bad ? 'err' : 'ok'}" role="status">${esc(msg.text)}</p>` : ''}
+        ${cardSectionHtml(ctx, p)}
         ${playerFormHtml(p, { id: 'profile-form', full: true, submitLabel: 'Save profile' })}`;
     } else if (ctx.isPro()) {
       playerPart = '<div class="card"><h2>No player yet</h2><a class="btn btn-primary" href="#/onboarding">Set up my player</a></div>';
@@ -105,7 +107,7 @@ export default {
     return playerPart + familyHtml(ctx);
   },
   bind(ctx) {
-    bindSwitcher(ctx); bindFamily(ctx);
+    bindSwitcher(ctx); bindFamily(ctx); bindCardSection(ctx);
     const form = $('profile-form');
     if (!form) return;
     bindSportSwitch('profile-form');

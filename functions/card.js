@@ -1,0 +1,150 @@
+// Recruiting card: the public projection of a player, and view tracking.
+//
+// cards/{slug}      public, read by anyone with the link. Built only from fields that are
+//                   meant to be shared; private fields never reach it.
+// cardSlugs/{slug}  server-only map slug → { fid, pid }.
+// cardTokens/{tok}  server-only map per-coach link token → { fid, pid, contactId, schoolName }.
+// cardViews/{slug}/views/{id}  server-only view log.
+
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onRequest } = require('firebase-functions/v2/https');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const crypto = require('node:crypto');
+
+const db = getFirestore();
+
+const STAT_KEYS = ['goals', 'assists', 'groundBalls', 'causedTO', 'saves', 'savePct', 'faceoffPct', 'drawControls'];
+
+/** The public card for a player. Only shareable fields; first name + last initial. */
+function buildCard(player, { contactEmail, summer = [] } = {}) {
+  const stats = {};
+  for (const k of STAT_KEYS) if (player.stats && player.stats[k] != null) stats[k] = player.stats[k];
+  return {
+    firstName: player.firstName || '',
+    lastInitial: (player.lastName || '').slice(0, 1).toUpperCase(),
+    sport: player.sport || null,
+    position: player.position || null,
+    gradYear: player.gradYear || null,
+    jersey: player.jersey || null,
+    highSchool: player.highSchool?.name ? { name: player.highSchool.name, state: player.highSchool.state || null } : null,
+    club: player.club?.name ? { name: player.club.name, team: player.club.team || null, level: player.club.level || null } : null,
+    gpa: player.academics?.gpa ?? null,
+    gpaScale: player.academics?.gpaScale ?? 4,
+    stats,
+    statsSeason: player.stats?.season || null,
+    rankings: (player.rankings || []).map((r) => ({ source: r.source, value: r.value, url: r.url || null })),
+    filmUrl: player.filmUrl || null,
+    summer,
+    contactEmail: contactEmail || null,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+/** Email shown on the card: the family owner's (the parent who set up the account). */
+async function familyContactEmail(fid) {
+  const fam = await db.doc(`families/${fid}`).get();
+  const owner = fam.get('ownerUid');
+  if (!owner) return null;
+  const user = await db.doc(`users/${owner}`).get();
+  return user.get('email') || null;
+}
+
+/** Keep cards/{slug} and cardSlugs/{slug} in step with the player doc. */
+const onPlayerWrite = onDocumentWritten('families/{fid}/players/{pid}', async (event) => {
+  const { fid, pid } = event.params;
+  const before = event.data.before.exists ? event.data.before.data() : null;
+  const after = event.data.after.exists ? event.data.after.data() : null;
+  const slug = (after || before)?.cardSlug;
+  if (!slug) return;
+
+  if (!after) {
+    await Promise.all([db.doc(`cards/${slug}`).delete(), db.doc(`cardSlugs/${slug}`).delete()]);
+    return;
+  }
+  if (!before || before.cardSlug !== after.cardSlug) {
+    await db.doc(`cardSlugs/${slug}`).set({ fid, pid });
+  }
+  if (!after.cardPublished) {
+    if (before?.cardPublished) await db.doc(`cards/${slug}`).delete();
+    return;
+  }
+  // Rebuild only when a shared field changed (cardStats updates from views don't count).
+  const shared = (p) => JSON.stringify(p && { ...buildCard(p), updatedAt: null, published: p.cardPublished, summer: p.cardSummer || [] });
+  if (before && before.cardPublished && shared(before) === shared(after)) return;
+  const contactEmail = await familyContactEmail(fid);
+  await db.doc(`cards/${slug}`).set(buildCard(after, { contactEmail, summer: after.cardSummer || [] }));
+});
+
+// ---------- view tracking ----------
+
+// Link scanners and bots that open links in emails. The card page also only reports a view
+// from JavaScript, which most scanners never run.
+const BOT_UA = /bot|crawl|spider|slurp|preview|scanner|safelinks|proofpoint|mimecast|barracuda|facebookexternalhit|whatsapp|slack|discord|telegram|skype|curl|wget|python|java\/|go-http|headless|phantom|lighthouse/i;
+const DEDUPE_MINUTES = 30;
+const DAYS_KEPT = 30;
+
+function dayKey(d) { return d.toISOString().slice(0, 10); }
+
+/** Pure: update cardStats with one view. */
+function applyView(stats = {}, { now, schoolName }) {
+  const daily = { ...(stats.daily || {}) };
+  const today = dayKey(now);
+  daily[today] = (daily[today] || 0) + 1;
+  const cutoff = dayKey(new Date(now.getTime() - (DAYS_KEPT - 1) * 864e5));
+  for (const k of Object.keys(daily)) if (k < cutoff) delete daily[k];
+  const views30d = Object.values(daily).reduce((a, b) => a + b, 0);
+  let recentSchools = stats.recentSchools || [];
+  if (schoolName) recentSchools = [schoolName, ...recentSchools.filter((s) => s !== schoolName)].slice(0, 5);
+  return {
+    daily, views30d, total: (stats.total || 0) + 1, lastViewAt: now,
+    recentSchools, tokenViews: (stats.tokenViews || 0) + (schoolName ? 1 : 0),
+  };
+}
+
+/**
+ * POST /cardView { slug, r? } — log one view of a published card.
+ * r = the per-coach token from a tracked link. Bots and repeat views within 30 minutes don't count.
+ */
+const cardView = onRequest({ cors: true }, async (req, res) => {
+  if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
+  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+  const slug = String(body.slug || '').replace(/[^a-z0-9]/g, '').slice(0, 16);
+  const token = String(body.r || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || null;
+  const ua = String(req.get('user-agent') || '');
+  if (!slug) { res.status(400).json({ error: 'slug required' }); return; }
+  if (BOT_UA.test(ua) && !process.env.LAXHQ_ALLOW_HEADLESS) { res.json({ counted: false, reason: 'bot' }); return; }
+
+  const map = await db.doc(`cardSlugs/${slug}`).get();
+  const card = await db.doc(`cards/${slug}`).get();
+  if (!map.exists || !card.exists) { res.status(404).json({ error: 'not found' }); return; }
+  const { fid, pid } = map.data();
+
+  let tokenInfo = null;
+  if (token) {
+    const t = await db.doc(`cardTokens/${token}`).get();
+    if (t.exists && t.get('fid') === fid && t.get('pid') === pid) tokenInfo = t.data();
+  }
+
+  const ip = String(req.get('x-forwarded-for') || req.ip || '').split(',')[0].trim();
+  const viewer = crypto.createHash('sha256').update(`${slug}|${ip}|${ua}|${token || ''}`).digest('hex').slice(0, 32);
+  const now = new Date();
+  const dedupeRef = db.doc(`cardViews/${slug}/recent/${viewer}`);
+  const playerRef = db.doc(`families/${fid}/players/${pid}`);
+
+  const counted = await db.runTransaction(async (tx) => {
+    const [recent, player] = await Promise.all([tx.get(dedupeRef), tx.get(playerRef)]);
+    if (recent.exists && now - recent.get('at').toDate() < DEDUPE_MINUTES * 60e3) return false;
+    tx.set(dedupeRef, { at: now });
+    tx.set(db.collection(`cardViews/${slug}/views`).doc(), {
+      at: now, token: tokenInfo ? token : null, contactId: tokenInfo?.contactId || null, schoolName: tokenInfo?.schoolName || null,
+    });
+    tx.update(playerRef, { cardStats: applyView(player.get('cardStats'), { now, schoolName: tokenInfo?.schoolName || null }) });
+    if (tokenInfo?.contactId) {
+      tx.set(db.doc(`families/${fid}/players/${pid}/contacts/${tokenInfo.contactId}`), { lastCardViewAt: now, cardViews: FieldValue.increment(1) }, { merge: true });
+    }
+    return true;
+  });
+  res.json({ counted });
+});
+
+module.exports = { onPlayerWrite, cardView, buildCard, applyView, BOT_UA };

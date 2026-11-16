@@ -364,3 +364,8 @@ exports.refreshMyClaims = onCall(async (req) => {
   return { claims: await setClaims(uid, userSnap.get('familyId') || null) };
 });
 
+// ---------- recruiting card (Phase 3) ----------
+const card = require('./card');
+
+exports.onPlayerWrite = card.onPlayerWrite;
+exports.cardView = card.cardView;

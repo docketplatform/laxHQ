@@ -7,7 +7,7 @@
     "test": "npm run test:unit && npm run test:rules && npm run test:functions && npm run test:e2e",
     "emulators": "firebase emulators:start --project demo-laxhq",
     "seed": "node scripts/seed-config.mjs && node scripts/seed-schools.mjs",
-    "test:e2e": "firebase emulators:exec --only auth,firestore,functions,hosting --project demo-laxhq \"node scripts/seed-config.mjs && node scripts/seed-schools.mjs && node tests/e2e.mjs && node tests/e2e/schools.mjs\"",
+    "test:e2e": "firebase emulators:exec --only auth,firestore,functions,hosting --project demo-laxhq \"node scripts/seed-config.mjs && node scripts/seed-schools.mjs && node tests/e2e.mjs && node tests/e2e/schools.mjs && node tests/e2e/card.mjs\"",
     "test:unit": "node --test tests/unit/*.test.mjs"
   },
   "devDependencies": {

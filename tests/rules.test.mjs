@@ -196,3 +196,17 @@ test('receipts: own family on Pro can upload an image; others cannot', async () 
   await assertFails(uploadBytes(ref(otherStorage, `receipts/${FID}/r3.jpg`), bytes, meta));
   await assertFails(uploadBytes(ref(proStorage, `receipts/${FID}/r4.exe`), bytes, { contentType: 'application/x-msdownload' }));
 });
+
+test('cards are public; slug maps, tokens and view logs are server-only', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'cards/abcd2345'), { firstName: 'Jake' });
+    await setDoc(doc(db, 'cardSlugs/abcd2345'), { fid: FID, pid: PID });
+    await setDoc(doc(db, 'cardTokens/t1'), { fid: FID });
+  });
+  await assertSucceeds(getDoc(doc(anon(), 'cards/abcd2345')));
+  await assertFails(setDoc(doc(pro(), 'cards/abcd2345'), { firstName: 'Fake' }));
+  await assertFails(getDoc(doc(pro(), 'cardSlugs/abcd2345')));
+  await assertFails(getDoc(doc(pro(), 'cardTokens/t1')));
+  await assertFails(getDoc(doc(pro(), 'cardViews/abcd2345/views/v1')));
+});

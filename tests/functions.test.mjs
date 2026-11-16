@@ -10,6 +10,17 @@ import {
   getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, terminate,
 } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions';
+import { initializeApp as adminInit, getApps as adminApps } from 'firebase-admin/app';
+import { getFirestore as adminDb } from 'firebase-admin/firestore';
+
+if (!adminApps().length) adminInit({ projectId: PROJECT_ID_FOR_ADMIN() });
+function PROJECT_ID_FOR_ADMIN() { return 'demo-laxhq'; }
+const adb = adminDb();
+const until = async (fn, ms = 10000) => { const end = Date.now() + ms; for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error('timed out waiting'); await new Promise((r) => setTimeout(r, 200)); } };
+const CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+const view = (slug, r, ua = CHROME, ip = '203.0.113.7') => fetch('http://127.0.0.1:5001/demo-laxhq/us-central1/cardView', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': ua, 'X-Forwarded-For': ip }, body: JSON.stringify({ slug, r }),
+}).then(async (res) => ({ status: res.status, ...(await res.json()) }));
 
 const PROJECT = 'demo-laxhq';
 let n = 0;
@@ -190,4 +201,59 @@ test('addPlayer and updatePlayer validate input', async () => {
   await a.call('devSetPlan', { plan: 'free' });
   await a.claims();
   await assert.rejects(a.call('updatePlayer', { playerId, jersey: '9' }), /needs LaxHQ Pro/);
+});
+
+test('publishing builds the public card; unpublishing removes it', async () => {
+  const a = await newClient('carder');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.call('devSetPlan', { plan: 'pro' });
+  await a.claims();
+  const { playerId } = await a.call('addPlayer', { ...JAKE, jersey: '22', academics: { gpa: 3.7, sat: 1340 }, stats: { goals: 31 } });
+  const slug = (await adb.doc(`families/${familyId}/players/${playerId}`).get()).get('cardSlug');
+  await until(async () => (await adb.doc(`cardSlugs/${slug}`).get()).exists);
+  assert.equal((await adb.doc(`cards/${slug}`).get()).exists, false, 'not public until published');
+
+  await a.call('updatePlayer', { playerId, cardPublished: true });
+  const card = await until(async () => { const c = await adb.doc(`cards/${slug}`).get(); return c.exists && c.data(); });
+  assert.equal(card.firstName, 'Jake');
+  assert.equal(card.lastInitial, 'M');
+  assert.equal(card.lastName, undefined);
+  assert.equal(card.sat, undefined);
+  assert.equal(card.gpa, 3.7);
+  assert.match(card.contactEmail, /@example\.com$/);
+
+  await a.call('updatePlayer', { playerId, jersey: '7' });
+  await until(async () => (await adb.doc(`cards/${slug}`).get()).get('jersey') === '7');
+
+  await a.call('updatePlayer', { playerId, cardPublished: false });
+  await until(async () => !(await adb.doc(`cards/${slug}`).get()).exists);
+});
+
+test('card views: counted once per viewer, bots ignored, coach tokens attributed', async () => {
+  const a = await newClient('viewed');
+  const { familyId } = await a.call('bootstrapFamily', {});
+  await a.call('devSetPlan', { plan: 'pro' });
+  await a.claims();
+  const { playerId } = await a.call('addPlayer', JAKE);
+  const pref = adb.doc(`families/${familyId}/players/${playerId}`);
+  const slug = (await pref.get()).get('cardSlug');
+  await a.call('updatePlayer', { playerId, cardPublished: true });
+  await until(async () => (await adb.doc(`cards/${slug}`).get()).exists);
+
+  assert.equal((await view(slug)).counted, true);
+  assert.equal((await view(slug)).counted, false, 'same viewer within 30 minutes');
+  assert.equal((await view(slug, undefined, 'Microsoft Office SafeLinks')).reason, 'bot');
+  assert.equal((await view('nosuchslug')).status, 404);
+
+  await adb.doc('cardTokens/tokTufts1').set({ fid: familyId, pid: playerId, contactId: 'c1', schoolName: 'Tufts University' });
+  await adb.doc('cardTokens/tokOther1').set({ fid: 'someone-else', pid: 'x', contactId: 'c9', schoolName: 'Spoof U' });
+  assert.equal((await view(slug, 'tokTufts1', CHROME, '198.51.100.4')).counted, true);
+  assert.equal((await view(slug, 'tokOther1', CHROME, '198.51.100.5')).counted, true);
+
+  const st = (await pref.get()).get('cardStats');
+  assert.equal(st.total, 3);
+  assert.equal(st.views30d, 3);
+  assert.deepEqual(st.recentSchools, ['Tufts University'], 'a token from another family is not attributed');
+  const contact = await adb.doc(`families/${familyId}/players/${playerId}/contacts/c1`).get();
+  assert.equal(contact.get('cardViews'), 1);
 });
