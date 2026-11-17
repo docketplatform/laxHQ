@@ -9,3 +9,5 @@ ui-debug.log*
 service-account*.json
 functions/.secret.local
 functions/.env.local
+# Committed: non-secret settings for the live project (secrets stay in Secret Manager)
+!functions/.env.laxhq-ce7b7
