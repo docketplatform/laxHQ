@@ -84,11 +84,12 @@ jobs:
       # The functions need these secrets to exist before they can deploy. Create any that are
       # missing, and give any without a value a random placeholder. Secrets that already have
       # a value are never changed. Add real values in Google Cloud → Secret Manager → New version.
-      - name: Make sure the secrets exist
+      - name: Make sure Google services and secrets are ready
         env:
           CLOUDSDK_CORE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
         run: |
-          gcloud services enable secretmanager.googleapis.com --quiet
+          # Google services the Firebase deploy checks before it starts (safe to repeat).
+          gcloud services enable secretmanager.googleapis.com cloudbilling.googleapis.com cloudresourcemanager.googleapis.com iam.googleapis.com --quiet
           for s in ANTHROPIC_API_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET REVENUECAT_WEBHOOK_AUTH; do
             if ! gcloud secrets describe "$s" >/dev/null 2>&1; then
               gcloud secrets create "$s" --replication-policy=automatic --quiet
