@@ -1,6 +1,7 @@
 {
   "projects": {
     "default": "demo-laxhq",
-    "demo": "demo-laxhq"
+    "demo": "demo-laxhq",
+    "prod": "laxhq-ce7b7"
   }
 }

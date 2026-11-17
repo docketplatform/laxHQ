@@ -1,7 +1,7 @@
 // Fills schools/{id}.academics from the US Dept. of Education College Scorecard API.
 // Free key: https://api.data.gov/signup/ . Run yearly (or schedule it).
 //
-//   SCORECARD_API_KEY=… GOOGLE_APPLICATION_CREDENTIALS=key.json GCLOUD_PROJECT=laxhq-prod node scripts/import-scorecard.mjs
+//   SCORECARD_API_KEY=… GOOGLE_APPLICATION_CREDENTIALS=key.json GCLOUD_PROJECT=laxhq-ce7b7 node scripts/import-scorecard.mjs
 //
 // Average high-school GPA isn't in the Scorecard; it comes from each school's Common Data Set
 // (refreshAcademics, after launch). Rows that can't be matched are listed for a manual id.

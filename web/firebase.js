@@ -5,15 +5,19 @@ import { getFirestore, connectFirestoreEmulator } from 'https://www.gstatic.com/
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { getStorage, connectStorageEmulator } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js';
 
-// Real projects: replace with the web app config from the Firebase console
-// (Project settings → Your apps). These values are public by design.
+// Web app config from the Firebase console (Project settings → Your apps).
+// These values are public by design; security comes from the rules and functions.
 const FIREBASE_CONFIG = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'laxhq-prod.firebaseapp.com',
-  projectId: 'laxhq-prod',
-  storageBucket: 'laxhq-prod.appspot.com',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyA1WX6bklHuQSWMUNSr-HdnJCerPbyFniQ',
+  authDomain: 'laxhq-ce7b7.firebaseapp.com',
+  projectId: 'laxhq-ce7b7',
+  storageBucket: 'laxhq-ce7b7.firebasestorage.app',
+  messagingSenderId: '331833187',
+  appId: '1:331833187:web:c63374fd0556e1f2f7fd56',
 };
+
+/** Turn on once Apple sign-in is configured in Firebase Authentication. */
+export const APPLE_SIGN_IN = false;
 
 export const params = new URLSearchParams(location.search);
 export const USE_EMULATORS = ['localhost', '127.0.0.1'].includes(location.hostname) || params.has('emulator');

@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:   # run by hand to deploy (see the deploy job)
+    inputs:
+      seed:
+        description: Also load the starter data (NCAA rules, checklist, plans, school list)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -57,4 +62,9 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - run: npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive
+      - run: npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive --force
+      - name: Load starter data
+        if: inputs.seed
+        run: npm run seed
+        env:
+          GCLOUD_PROJECT: ${{ vars.FIREBASE_PROJECT }}

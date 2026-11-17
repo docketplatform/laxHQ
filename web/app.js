@@ -7,7 +7,7 @@ import {
 import {
   doc, getDoc, onSnapshot, collection, query, orderBy, where,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { auth, db, call, params, USE_EMULATORS } from './firebase.js';
+import { auth, db, call, params, USE_EMULATORS, APPLE_SIGN_IN } from './firebase.js';
 import { $, safeStorage, errorText } from './util.js';
 import { views } from './views/index.js';
 import { maybeSubmitDraft } from './views/onboarding.js';
@@ -139,6 +139,7 @@ function showSignin() {
   $('loading').hidden = true; $('app').hidden = true; $('signin').hidden = false;
   $('invite-note').hidden = !safeStorage.get('laxhq.invite');
   $('dev-form').hidden = !USE_EMULATORS;
+  $('apple').hidden = !APPLE_SIGN_IN;
 }
 function signinMsg(text, bad) { const m = $('signin-msg'); m.className = bad ? 'err' : 'ok'; m.textContent = text; }
 
