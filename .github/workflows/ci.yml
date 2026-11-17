@@ -4,12 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:   # run by hand to deploy (see the deploy job)
-    inputs:
-      seed:
-        description: Also load the starter data (NCAA rules, checklist, plans, school list)
-        type: boolean
-        default: false
+  workflow_dispatch:   # run by hand: same as a push to main
 
 permissions:
   contents: read
@@ -34,17 +29,40 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: functions
-      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
+      - run: npm run test:unit
       - run: npm run test:rules
       - run: npm run test:functions
+
+  # Browser walk-throughs, in parallel with the other tests. A deploy waits for both.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm ci
+        working-directory: functions
+      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
       - run: npm run test:e2e
 
-  # Deploys rules, indexes and functions to the (single, live) Firebase project.
-  # Only when run by hand from the Actions tab, after every test passes, and once the
-  # FIREBASE_SERVICE_ACCOUNT secret and FIREBASE_PROJECT variable are set.
+  # Deploys rules, indexes and functions to the live Firebase project on every push to main
+  # (the owner chose automatic deploys), or when run by hand, after ALL tests pass.
+  # Needs the FIREBASE_SERVICE_ACCOUNT secret and FIREBASE_PROJECT variable.
   deploy:
-    needs: test
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.FIREBASE_PROJECT != ''
+    needs: [test, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.FIREBASE_PROJECT != ''
+    concurrency: deploy-production
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -84,8 +102,7 @@ jobs:
             fi
           done
       - run: npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive --force
-      - name: Load starter data
-        if: inputs.seed
+      - name: Load starter data (config rewritten from the repo; schools merged)
         run: npm run seed
         env:
           GCLOUD_PROJECT: ${{ vars.FIREBASE_PROJECT }}

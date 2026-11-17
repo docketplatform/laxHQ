@@ -132,7 +132,7 @@ Configure the app's `app_user_id` as the family id, add a webhook to `…/revenu
 
 ### 6. CI and deploys
 
-`.github/workflows/ci.yml` runs every suite on each push. Because there's one project, deploys never happen automatically: to deploy from GitHub, add a service account key as the GitHub secret `FIREBASE_SERVICE_ACCOUNT`, set the repository variable `FIREBASE_PROJECT` to your project id, then run the workflow by hand (Actions → CI → Run workflow). It runs every test first and deploys only if they pass.
+`.github/workflows/ci.yml` runs every suite on each push. Every push to `main` deploys to the live project automatically once **all** tests pass (unit, rules, functions and browser), then reloads the starter data (config is rewritten from the repo; schools are merged). It needs the GitHub secret `FIREBASE_SERVICE_ACCOUNT` (a service account key with Owner on the project) and the repository variable `FIREBASE_PROJECT`. The deploy also creates any missing secret in Secret Manager with a placeholder value; replace placeholders with real keys there (New version).
 
 ## Before launch: still to do by a person
 
