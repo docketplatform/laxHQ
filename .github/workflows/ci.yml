@@ -62,6 +62,27 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      # The functions need these secrets to exist before they can deploy. Create any that are
+      # missing, and give any without a value a random placeholder. Secrets that already have
+      # a value are never changed. Add real values in Google Cloud → Secret Manager → New version.
+      - name: Make sure the secrets exist
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+        run: |
+          gcloud services enable secretmanager.googleapis.com --quiet
+          for s in ANTHROPIC_API_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET REVENUECAT_WEBHOOK_AUTH; do
+            if ! gcloud secrets describe "$s" >/dev/null 2>&1; then
+              gcloud secrets create "$s" --replication-policy=automatic --quiet
+              echo "Created secret $s"
+            fi
+            if [ -z "$(gcloud secrets versions list "$s" --filter='state=ENABLED' --limit=1 --format='value(name)')" ]; then
+              printf 'placeholder-%s' "$(openssl rand -hex 16)" | gcloud secrets versions add "$s" --data-file=- --quiet
+              echo "::warning::$s had no value, so it got a placeholder. Add the real value in Secret Manager (New version)."
+            else
+              echo "$s already has a value; left unchanged"
+            fi
+          done
       - run: npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive --force
       - name: Load starter data
         if: inputs.seed
