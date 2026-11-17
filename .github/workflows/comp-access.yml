@@ -1,0 +1,47 @@
+name: Complimentary Pro
+
+# Run by hand (Actions → Complimentary Pro → Run workflow) to give a family Pro with no charge,
+# e.g. the owner's own test account. Only people with write access to the repo can run it.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Email the parent signs in with (they must have signed in once)
+        required: true
+      players:
+        description: How many players the family can add
+        default: '2'
+      action:
+        description: grant or revoke
+        type: choice
+        options: [grant, revoke]
+        default: grant
+
+permissions:
+  contents: read
+
+jobs:
+  comp:
+    if: vars.FIREBASE_PROJECT != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hide the email in the logs
+        run: echo "::add-mask::$COMP_EMAIL"
+        env:
+          COMP_EMAIL: ${{ inputs.email }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: node scripts/comp-access.mjs "$COMP_ACTION"
+        env:
+          GCLOUD_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          COMP_EMAIL: ${{ inputs.email }}
+          COMP_PLAYERS: ${{ inputs.players }}
+          COMP_ACTION: ${{ inputs.action }}
