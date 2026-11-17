@@ -1,7 +1,7 @@
 // Seeds the config/* docs: NCAA contact rules, the checklist template and plan limits.
 //
 // Against the emulator:   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node scripts/seed-config.mjs
-// Against a real project: GOOGLE_APPLICATION_CREDENTIALS=key.json GCLOUD_PROJECT=laxhq-dev node scripts/seed-config.mjs
+// Against a real project: GOOGLE_APPLICATION_CREDENTIALS=key.json GCLOUD_PROJECT=laxhq-prod node scripts/seed-config.mjs
 //
 // Verify every rule below against ncaa.org before seeding production.
 // Changing a rule later is a data change: edit this file, bump the version, re-run.

@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:   # run by hand to deploy (see the deploy job)
 
 permissions:
   contents: read
@@ -33,11 +34,12 @@ jobs:
       - run: npm run test:functions
       - run: npm run test:e2e
 
-  # Deploys rules, indexes and functions to the dev project on every push to main,
-  # once the FIREBASE_SERVICE_ACCOUNT secret and FIREBASE_PROJECT variable are set.
-  deploy-dev:
+  # Deploys rules, indexes and functions to the (single, live) Firebase project.
+  # Only when run by hand from the Actions tab, after every test passes, and once the
+  # FIREBASE_SERVICE_ACCOUNT secret and FIREBASE_PROJECT variable are set.
+  deploy:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FIREBASE_PROJECT != ''
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.FIREBASE_PROJECT != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -2,7 +2,7 @@
 // Re-running keeps any academics already imported (merge).
 //
 //   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node scripts/seed-schools.mjs
-//   GOOGLE_APPLICATION_CREDENTIALS=key.json GCLOUD_PROJECT=laxhq-dev node scripts/seed-schools.mjs
+//   GOOGLE_APPLICATION_CREDENTIALS=key.json GCLOUD_PROJECT=laxhq-prod node scripts/seed-schools.mjs
 import { readFileSync } from 'node:fs';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';

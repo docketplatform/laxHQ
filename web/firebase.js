@@ -9,9 +9,9 @@ import { getStorage, connectStorageEmulator } from 'https://www.gstatic.com/fire
 // (Project settings → Your apps). These values are public by design.
 const FIREBASE_CONFIG = {
   apiKey: 'REPLACE_ME',
-  authDomain: 'laxhq-dev.firebaseapp.com',
-  projectId: 'laxhq-dev',
-  storageBucket: 'laxhq-dev.appspot.com',
+  authDomain: 'laxhq-prod.firebaseapp.com',
+  projectId: 'laxhq-prod',
+  storageBucket: 'laxhq-prod.appspot.com',
   appId: 'REPLACE_ME',
 };
 

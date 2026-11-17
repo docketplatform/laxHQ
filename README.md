@@ -84,11 +84,13 @@ The browser tests need Playwright's Chromium (`npx playwright install chromium`)
 
 ## Going live
 
+LaxHQ runs as **one Firebase project** (called `laxhq-prod` below; use whatever id Firebase gives you). Development and testing happen on your computer with the emulators, which need no billing. Stripe's test mode stands in for a separate test environment: connect test keys first, then switch to live keys. A separate dev project can be added later if your Google billing account has room.
+
 ### 1. Firebase
 
-1. Create projects `laxhq-dev` and `laxhq-prod`. Upgrade to the Blaze plan (needed for Cloud Functions and outbound requests).
+1. Create one project, e.g. `laxhq-prod`, and upgrade it to the Blaze plan (needed for Cloud Functions and outbound requests). If Firebase says the billing account has reached its linked-project limit, disable billing on a project you no longer use (Google Cloud console → Billing → Account management), or request a higher limit from Google.
 2. Enable Firestore, Storage, and Authentication with the Google, Apple and Email link providers. Add your web domain under Authentication → Settings → Authorized domains.
-3. Put the web app config (Project settings → Your apps) into `FIREBASE_CONFIG` in `web/firebase.js`, and add the projects to `.firebaserc`.
+3. Put the web app config (Project settings → Your apps) into `FIREBASE_CONFIG` in `web/firebase.js`, and add the project to `.firebaserc` (`"prod": "<your project id>"`).
 4. Secrets (stored in Google Secret Manager):
 
    ```bash
@@ -111,6 +113,8 @@ Create a second Netlify site for the app (the marketing page stays on laxhq.netl
 
 ### 3. Stripe
 
+Do everything below in Stripe's **test mode** first, with test keys saved as the secrets, and make a test purchase end to end. Then repeat in live mode and replace the secrets and price ids with the live ones.
+
 1. Create a product "LaxHQ Pro" with prices $500/year and $49/month, and a product "Sibling add-on" at $99/year. Put the three price ids in `functions/.env.<project>`.
 2. Turn on the Customer Portal (Settings → Billing → Customer portal): allow plan switching between the two Pro prices, quantity changes for the sibling add-on, payment method updates, invoice history and cancellation.
 3. Add a webhook endpoint `https://us-central1-<project>.cloudfunctions.net/stripeWebhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` and `invoice.paid`. Save its signing secret as `STRIPE_WEBHOOK_SECRET`.
@@ -126,13 +130,13 @@ Configure the app's `app_user_id` as the family id, add a webhook to `…/revenu
 - Alerts: in Cloud Monitoring, alert on Cloud Functions error rate, and set a spend limit and alert in the Anthropic Console.
 - App Check: register the web app with reCAPTCHA Enterprise, put the site key in `APP_CHECK_SITE_KEY` in `web/firebase.js`, deploy, then set `ENFORCE_APP_CHECK=true`.
 
-### 6. CI deploys
+### 6. CI and deploys
 
-`.github/workflows/ci.yml` runs every suite on each push. To deploy to dev from `main`, add a service account key as the GitHub secret `FIREBASE_SERVICE_ACCOUNT` and set the repository variable `FIREBASE_PROJECT` to `laxhq-dev`.
+`.github/workflows/ci.yml` runs every suite on each push. Because there's one project, deploys never happen automatically: to deploy from GitHub, add a service account key as the GitHub secret `FIREBASE_SERVICE_ACCOUNT`, set the repository variable `FIREBASE_PROJECT` to your project id, then run the workflow by hand (Actions → CI → Run workflow). It runs every test first and deploys only if they pass.
 
 ## Before launch: still to do by a person
 
 - Have a lawyer review and complete `web/privacy.html` and `web/terms.html` (they're drafts).
 - Verify NCAA rules (`scripts/seed-config.mjs`) and the school catalog (`data/schools.json`).
 - Check the calendar-link help text against real TeamSnap, SportsEngine and LeagueApps accounts, and test imports with real feeds.
-- Run a test purchase in Stripe test mode end to end on the dev project.
+- Run a test purchase in Stripe test mode end to end before switching to live keys.

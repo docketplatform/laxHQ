@@ -1,5 +1,5 @@
 # Netlify serves the web app from web/. Cloud Functions are reached through /api/*.
-# Replace PROJECT_ID with your Firebase project id (e.g. laxhq-prod).
+# Replace PROJECT_ID with your Firebase project id (LaxHQ uses a single project, e.g. laxhq-prod).
 [build]
   publish = "web"
 
