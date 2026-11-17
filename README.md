@@ -29,7 +29,7 @@ web/                     the app (served as static files)
   views/*.js             one module per screen
   lib/*.js               pure logic shared with the tests (plan, fit, expenses, options)
   help.html privacy.html terms.html static.css
-functions/               Cloud Functions (Node 20)
+functions/               Cloud Functions (Node 22)
   index.js               families, invites, players, claims; wires the modules below
   card.js coaches.js schedule.js expenses.js billing.js account.js
   lib/                   player validation, iCalendar parsing, safe fetching, overlaps
@@ -43,7 +43,7 @@ netlify.toml             serves web/ and proxies /api/* to Cloud Functions
 
 ## Run it locally
 
-Needs Node 20+ and Java 17+ (for the emulators).
+Needs Node 22+ and Java 17+ (for the emulators).
 
 ```bash
 npm install
