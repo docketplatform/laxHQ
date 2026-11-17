@@ -89,7 +89,11 @@ jobs:
           CLOUDSDK_CORE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
         run: |
           # Google services the Firebase deploy checks before it starts (safe to repeat).
-          gcloud services enable secretmanager.googleapis.com cloudbilling.googleapis.com cloudresourcemanager.googleapis.com iam.googleapis.com --quiet
+          gcloud services enable secretmanager.googleapis.com cloudbilling.googleapis.com cloudresourcemanager.googleapis.com iam.googleapis.com eventarc.googleapis.com pubsub.googleapis.com run.googleapis.com --quiet
+          # Database-triggered functions need Google's own Eventarc and Pub/Sub agents to hold their roles.
+          num=$(gcloud projects describe "$CLOUDSDK_CORE_PROJECT" --format='value(projectNumber)')
+          gcloud projects add-iam-policy-binding "$CLOUDSDK_CORE_PROJECT" --member="serviceAccount:service-$num@gcp-sa-eventarc.iam.gserviceaccount.com" --role=roles/eventarc.serviceAgent --condition=None --quiet >/dev/null || echo "::warning::could not grant the Eventarc agent role"
+          gcloud projects add-iam-policy-binding "$CLOUDSDK_CORE_PROJECT" --member="serviceAccount:service-$num@gcp-sa-pubsub.iam.gserviceaccount.com" --role=roles/iam.serviceAccountTokenCreator --condition=None --quiet >/dev/null || echo "::warning::could not grant the Pub/Sub agent role"
           for s in ANTHROPIC_API_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET REVENUECAT_WEBHOOK_AUTH; do
             if ! gcloud secrets describe "$s" >/dev/null 2>&1; then
               gcloud secrets create "$s" --replication-policy=automatic --quiet
@@ -102,7 +106,11 @@ jobs:
               echo "$s already has a value; left unchanged"
             fi
           done
-      - run: npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive --force
+      # A first deploy can hit Google permissions that are still propagating; wait and retry once.
+      - name: Deploy to Firebase
+        run: |
+          deploy() { npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive --force; }
+          deploy || { echo "First attempt failed; retrying in 3 minutes"; sleep 180; deploy; }
       - name: Load starter data (config rewritten from the repo; schools merged)
         run: npm run seed
         env:
