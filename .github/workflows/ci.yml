@@ -123,6 +123,17 @@ jobs:
         run: |
           deploy() { npx firebase deploy --project "${{ vars.FIREBASE_PROJECT }}" --only firestore,storage,functions --non-interactive --force; }
           deploy || { echo "First attempt failed; retrying in 3 minutes"; sleep 180; deploy; }
+      - name: Check which keys are still placeholders (values are never printed)
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+        run: |
+          for s in ANTHROPIC_API_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET REVENUECAT_WEBHOOK_AUTH; do
+            if gcloud secrets versions access latest --secret="$s" 2>/dev/null | grep -q '^placeholder-'; then
+              echo "::warning::$s is still a placeholder"
+            else
+              echo "$s: real value in use"
+            fi
+          done
       - name: Load starter data (config rewritten from the repo; schools merged)
         run: npm run seed
         env:
