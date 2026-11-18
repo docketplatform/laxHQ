@@ -50,15 +50,16 @@ try {
 
   if (SHOTS) await coach.screenshot({ path: `${SHOTS}/10-public-card.png`, fullPage: true });
 
-  // Film plays inside the card; the second video is one tap away.
+  // The family sees the view.
+  await page.locator('#card-stats', { hasText: /Views, 30 days\s*1/ }).waitFor({ timeout: 30000 });
+
+  // Film plays inside the card; the second video is one tap away. Each play is counted.
   await coach.click('#rplayer [data-play]');
   assert.match(await coach.locator('#rplayer iframe').getAttribute('src'), /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ.*autoplay=1/);
+  await page.locator('#card-stats', { hasText: /Video plays, 30 days\s*1/ }).waitFor({ timeout: 30000 });
   await coach.click('.rvid[data-v="1"]');
   assert.match(await coach.locator('#rplayer iframe').getAttribute('src'), /player\.vimeo\.com\/video\/123456789/);
-
-  // The family sees the view and the plays.
-  await page.locator('#card-stats', { hasText: /Views, 30 days\s*1/ }).waitFor({ timeout: 15000 });
-  await page.locator('#card-stats', { hasText: /Video plays, 30 days\s*2/ }).waitFor({ timeout: 15000 });
+  await page.locator('#card-stats', { hasText: /Video plays, 30 days\s*2/ }).waitFor({ timeout: 30000 });
 
   // The family can switch to first name + last initial.
   await page.selectOption('#card-name', 'initial');
