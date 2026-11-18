@@ -69,10 +69,18 @@ try {
   await lafayette.locator('.chip', { hasText: 'Reach' }).waitFor();
   assert.match(await lafayette.innerText(), /Contacted/);
 
-  // Remove the custom school; the counter follows.
+  // Edit the custom school's details.
   await page.click('text=Roanoke College');
-  await page.click('#remove-target');
-  await page.locator('a.link-card').nth(1).waitFor();
+  await page.fill('#ce-name', 'Roanoke College (VA)');
+  await page.fill('#ce-conf', 'ODAC');
+  await page.click('#custom-edit button[type=submit]');
+  await page.locator('#view >> text=Saved.').waitFor();
+  await page.locator('h1', { hasText: 'Roanoke College (VA)' }).waitFor();
+
+  // Remove it from the list itself; the counter follows.
+  await page.goto(`${BASE}#/schools`);
+  await page.click('[aria-label="Remove Roanoke College (VA)"]');
+  await page.getByText('Roanoke College (VA) removed.').waitFor();
   assert.equal(await page.locator('a.link-card').count(), 2);
   const fid = (await db.doc(`users/${await uidFor('casey@example.com')}`).get()).get('familyId');
   const players = await db.collection(`families/${fid}/players`).get();
@@ -84,7 +92,7 @@ try {
   await page.getByText('You’re looking at a sample family.').waitFor();
 
   assert.deepEqual(run.errors, [], run.errors.join('; '));
-  console.log('e2e schools: catalog search, custom school, fit, how you compare, override, notes, remove ✔');
+  console.log('e2e schools: catalog search, custom school, fit, how you compare, override, notes, edit custom school, remove from list ✔');
 } finally {
   await run.close();
 }

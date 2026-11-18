@@ -1,7 +1,7 @@
 // Schools tab: the target list (#/schools), search-and-add (#/schools/add) and
 // one school's detail with "How you compare" (#/schools/<id>).
 import {
-  doc, getDoc, writeBatch, increment, serverTimestamp, updateDoc,
+  doc, getDoc, writeBatch, increment, serverTimestamp, updateDoc, collection, query, where, getDocs,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { $, esc, formToObject, options, errorText } from '../util.js';
 import { targetFit, listBalance, normalizeGpa, defaultAthleticTier, TIERS } from '../lib/fit.js';
@@ -78,10 +78,14 @@ function listView(ctx) {
     ${rows.length ? `<div class="banner info" id="balance" style="display:block">Your list: <b style="display:inline">${counts.reach} reach · ${counts.target} target · ${counts.likely} likely</b>${counts.unrated ? ` · ${counts.unrated} not rated` : ''}</div>` : ''}
     ${balance.warning ? `<div class="banner warn" role="note" id="balance-warning">${esc(balance.warning)}</div>` : ''}
     ${rows.length ? `<div class="seg" role="tablist" aria-label="Division">${['All', 'D1', 'D2', 'D3'].map((d) => `<button role="tab" aria-selected="${d === filter}" data-filter="${d}">${d}</button>`).join('')}</div>` : ''}
-    ${shown.map(({ t, f }) => `<a class="card link-card" href="#/schools/${esc(t.id)}">
+    ${ctx.state.ui.listMsg ? `<p class="ok" role="status">${esc(ctx.state.ui.listMsg)}</p>` : ''}
+    ${shown.map(({ t, f }) => `<div class="card target-card">
+      <a class="link-card" href="#/schools/${esc(t.id)}">
       <div class="row"><span><b>${esc(t.name)}</b><br><span class="small">${esc([t.division, t.conference, [t.city, t.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}</span></span>${chip(f.tier)}</div>
       <div class="fits"><span><span class="small">Athletic</span><b>${f.athletic ? TIER_LABEL[f.athletic] : '—'}</b></span><span><span class="small">Academic</span><b>${f.academic ? TIER_LABEL[f.academic] : '—'}</b></span><span><span class="small">Status</span><b>${esc(statusLabel(t.status))}</b></span></div>
-    </a>`).join('')}
+      </a>
+      <div class="row end target-actions"><a class="btn btn-ghost btn-sm" href="#/schools/${esc(t.id)}" aria-label="Edit ${esc(t.name)}">Edit</a><button class="btn btn-ghost btn-sm danger" data-remove="${esc(t.id)}" aria-label="Remove ${esc(t.name)}">Remove</button></div>
+    </div>`).join('')}
     ${!rows.length ? `<div class="card"><h2>Start your list</h2><p class="muted">Add 15–25 schools across the divisions you’re open to: a few reaches, mostly targets and some likely schools. Each one gets an athletic and academic fit estimate.</p><a class="btn btn-primary" href="#/schools/add">Add your first school</a></div>` : ''}
     ${rows.length && !shown.length ? `<p class="muted">No ${filter} schools on the list.</p>` : ''}`;
 }
@@ -164,6 +168,16 @@ function detailView(ctx, id) {
       <p>Share ${esc(p.firstName)}’s GPA, anonymously, to help other families see what committed players at ${esc(t.name)} look like? It only appears as an average once 5 or more families share.</p>
       <div class="row start wrap"><button class="btn btn-primary" data-outcome="share">Share anonymously</button><button class="btn btn-ghost" data-outcome="private">Keep it private</button></div>
     </section>` : ''}
+    ${t.custom ? `<form id="custom-edit" class="card" data-keep novalidate>
+      <h2>School details</h2>
+      <div class="field"><label for="ce-name">School name</label><input id="ce-name" name="name" maxlength="100" required value="${esc(t.name)}"></div>
+      <div class="three">
+        <div class="field"><label for="ce-div">Division</label><select id="ce-div" name="division">${options(['D1', 'D2', 'D3', 'NAIA', 'JUCO'], t.division || 'D3')}</select></div>
+        <div class="field"><label for="ce-state">State</label><select id="ce-state" name="state">${options(STATES, t.state || '', { blank: 'Choose' })}</select></div>
+        <div class="field"><label for="ce-conf">Conference</label><input id="ce-conf" name="conference" maxlength="60" value="${esc(t.conference || '')}"></div>
+      </div>
+      <button class="btn btn-dark" type="submit">Save details</button>
+    </form>` : ''}
     <form id="target-form" class="card" data-keep>
       <h2>Your notes</h2>
       <div class="two">
@@ -175,7 +189,11 @@ function detailView(ctx, id) {
       <div class="field"><label for="t-notes">Notes</label><textarea id="t-notes" name="notes" maxlength="2000">${esc(t.notes || '')}</textarea></div>
       <button class="btn btn-dark" type="submit">Save</button>
     </form>
-    <button class="btn btn-ghost" id="remove-target">Remove from list</button>`;
+    <section class="card">
+      <h2>Remove ${esc(t.name)}</h2>
+      <p class="small">Takes it off ${esc(p.firstName)}’s list with its notes and status. Coaches you saved for this school stay in Coaches.</p>
+      <button class="btn btn-ghost danger" id="remove-target">Remove from list</button>
+    </section>`;
 }
 
 // ---------- screen ----------
@@ -196,6 +214,12 @@ export default {
     bindSwitcher(ctx);
     if (!ctx.isPro() || !ctx.currentPlayer()) return; // sample view: nothing to bind
     document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => ctx.setUi('schoolFilter', b.dataset.filter)));
+    document.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+      const t = ctx.state.targets.find((x) => x.id === b.dataset.remove);
+      if (!t || !confirm(`Remove ${t.name} from the list? Its notes and status are deleted.`)) return;
+      b.disabled = true;
+      try { await removeTarget(ctx, t.id); ctx.setUi('listMsg', `${t.name} removed.`); } catch (err) { b.disabled = false; alert(errorText(err)); }
+    }));
 
     const q = $('school-q');
     if (q) {
@@ -239,6 +263,23 @@ export default {
       const ref = doc(ctx.db, `${targetsRef(ctx)}/targets/${id}`);
       $('tier-override')?.addEventListener('change', (e) => updateDoc(ref, { tierOverride: e.target.value || null, updatedAt: serverTimestamp() })
         .then(() => ctx.setUi('targetMsg', { text: 'Saved.' })).catch((err) => ctx.setUi('targetMsg', { text: errorText(err), bad: true })));
+      $('custom-edit')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const d = formToObject(e.target);
+        const name = (d.name || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+        if (!name) { ctx.setUi('targetMsg', { text: 'Enter the school’s name.', bad: true }); return; }
+        try {
+          await updateDoc(ref, {
+            name, division: d.division, state: d.state || null, conference: (d.conference || '').trim().slice(0, 60) || null,
+            school: { academics: null, athleticTier: defaultAthleticTier(d.division, d.conference) }, updatedAt: serverTimestamp(),
+          });
+          // Coaches saved for this school show its name; keep them in step.
+          const contacts = await getDocs(query(collection(ctx.db, `${targetsRef(ctx)}/contacts`), where('schoolId', '==', id)));
+          await Promise.all(contacts.docs.map((c) => updateDoc(c.ref, { schoolName: name })));
+          e.target.querySelectorAll('[data-dirty]').forEach((el) => delete el.dataset.dirty);
+          ctx.setUi('targetMsg', { text: 'Saved.' });
+        } catch (err) { ctx.setUi('targetMsg', { text: errorText(err), bad: true }); }
+      });
       $('target-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const d = formToObject(e.target);
@@ -250,8 +291,9 @@ export default {
         } catch (err) { ctx.setUi('targetMsg', { text: errorText(err), bad: true }); }
       });
       $('remove-target')?.addEventListener('click', async () => {
-        if (!confirm('Remove this school from the list?')) return;
-        try { await removeTarget(ctx, id); ctx.navigate('#/schools'); } catch (err) { ctx.setUi('targetMsg', { text: errorText(err), bad: true }); }
+        const name = ctx.state.targets.find((x) => x.id === id)?.name || 'this school';
+        if (!confirm(`Remove ${name} from the list? Its notes and status are deleted.`)) return;
+        try { await removeTarget(ctx, id); ctx.navigate('#/schools', { listMsg: `${name} removed.` }); } catch (err) { ctx.setUi('targetMsg', { text: errorText(err), bad: true }); }
       });
       document.querySelectorAll('[data-outcome]').forEach((b) => b.addEventListener('click', async () => {
         try {
