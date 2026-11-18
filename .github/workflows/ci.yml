@@ -94,6 +94,18 @@ jobs:
           num=$(gcloud projects describe "$CLOUDSDK_CORE_PROJECT" --format='value(projectNumber)')
           gcloud projects add-iam-policy-binding "$CLOUDSDK_CORE_PROJECT" --member="serviceAccount:service-$num@gcp-sa-eventarc.iam.gserviceaccount.com" --role=roles/eventarc.serviceAgent --condition=None --quiet >/dev/null || echo "::warning::could not grant the Eventarc agent role"
           gcloud projects add-iam-policy-binding "$CLOUDSDK_CORE_PROJECT" --member="serviceAccount:service-$num@gcp-sa-pubsub.iam.gserviceaccount.com" --role=roles/iam.serviceAccountTokenCreator --condition=None --quiet >/dev/null || echo "::warning::could not grant the Pub/Sub agent role"
+          # Daily backups: a bucket that keeps exports 30 days, writable by the backup function.
+          bucket="$CLOUDSDK_CORE_PROJECT-backups"
+          if ! gcloud storage buckets describe "gs://$bucket" >/dev/null 2>&1; then
+            gcloud storage buckets create "gs://$bucket" --location=US --uniform-bucket-level-access --quiet
+            printf '{"rule":[{"action":{"type":"Delete"},"condition":{"age":30}}]}' > /tmp/lifecycle.json
+            gcloud storage buckets update "gs://$bucket" --lifecycle-file=/tmp/lifecycle.json --quiet
+            echo "Created backup bucket $bucket"
+          fi
+          sa="$num-compute@developer.gserviceaccount.com"
+          gcloud projects add-iam-policy-binding "$CLOUDSDK_CORE_PROJECT" --member="serviceAccount:$sa" --role=roles/datastore.importExportAdmin --condition=None --quiet >/dev/null
+          gcloud storage buckets add-iam-policy-binding "gs://$bucket" --member="serviceAccount:$sa" --role=roles/storage.objectAdmin --quiet >/dev/null
+          gcloud storage buckets add-iam-policy-binding "gs://$bucket" --member="serviceAccount:service-$num@gcp-sa-firestore.iam.gserviceaccount.com" --role=roles/storage.objectAdmin --quiet >/dev/null || echo "::warning::could not give Firestore's agent access to the backup bucket"
           for s in ANTHROPIC_API_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET REVENUECAT_WEBHOOK_AUTH; do
             if ! gcloud secrets describe "$s" >/dev/null 2>&1; then
               gcloud secrets create "$s" --replication-policy=automatic --quiet
