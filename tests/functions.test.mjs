@@ -684,3 +684,42 @@ test('deleteAccount: a member leaves; the owner deletes the family and everythin
   const fresh = await parent2.call('bootstrapFamily', {});
   assert.equal(fresh.created, true, 'a new, empty family');
 });
+
+test('admin area: only admins see every family; partner settings; reel requests', async () => {
+  const fam = await newClient('reelfam');
+  const { familyId } = await fam.call('bootstrapFamily', {});
+  await fam.call('devSetPlan', { plan: 'pro' });
+  await fam.claims();
+  const { playerId } = await fam.call('addPlayer', { ...JAKE });
+
+  const boss = await newClient('boss');
+  await boss.call('bootstrapFamily', {});
+  await assert.rejects(boss.call('adminOverview'), /Admins only/);
+  await assert.rejects(boss.call('adminSaveHighlightPartner', { active: true, name: 'X', email: 'x@example.com' }), /Admins only/);
+  await adb.doc(`admins/${boss.auth.currentUser.uid}`).set({ email: 'boss' });
+
+  // No partner yet: families can't send requests.
+  await adb.doc('config/highlights').delete();
+  await assert.rejects(fam.call('requestHighlights', { filmLinks: 'https://hudl.com/1' }), /aren’t available/);
+  await assert.rejects(boss.call('adminSaveHighlightPartner', { active: true, name: 'Dan' }), /email or phone/);
+  await assert.rejects(boss.call('adminSaveHighlightPartner', { active: true, name: 'Dan', email: 'dan@example.com', website: 'javascript:alert(1)' }), /https/);
+  await boss.call('adminSaveHighlightPartner', { active: true, name: 'Dan Reyes', business: 'Reyes Film', email: 'Dan@Example.com', priceFrom: 'From $250' });
+  assert.equal((await adb.doc('config/highlights').get()).get('email'), 'dan@example.com');
+
+  const { id } = await fam.call('requestHighlights', { playerId, filmLinks: 'https://hudl.com/1', neededBy: 'June', phone: '555-0100' });
+  const r = (await adb.doc(`highlightRequests/${id}`).get()).data();
+  assert.equal(r.fid, familyId); assert.equal(r.player.name, 'Jake Morrison'); assert.equal(r.status, 'new'); assert.equal(r.partnerName, 'Dan Reyes');
+
+  const o = await boss.call('adminOverview');
+  const f = o.families.find((x) => x.id === familyId);
+  assert.equal(f.plan, 'pro');
+  assert.equal(f.players[0].firstName, 'Jake');
+  assert.match(f.members[0].email, /@example\.com$/);
+  assert.ok(o.totals.families >= 2);
+  assert.ok(o.requests.some((x) => x.id === id));
+
+  await boss.call('adminUpdateHighlightRequest', { id, status: 'booked' });
+  assert.equal((await adb.doc(`highlightRequests/${id}`).get()).get('status'), 'booked');
+  await assert.rejects(fam.call('adminUpdateHighlightRequest', { id, status: 'done' }), /Admins only/);
+  await fam.close(); await boss.close();
+});

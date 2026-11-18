@@ -7,6 +7,8 @@ import schools from './schools.js';
 import coaches from './coaches.js';
 import events from './events.js';
 import spend from './spend.js';
+import highlights from './highlights.js';
+import admin from './admin.js';
 
 export const views = {
   home,
@@ -17,4 +19,6 @@ export const views = {
   coaches,
   events,
   spend,
+  highlights,
+  admin,
 };

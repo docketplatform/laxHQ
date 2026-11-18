@@ -85,6 +85,34 @@
           "arrayConfig": "CONTAINS"
         }
       ]
+    },
+    {
+      "collectionGroup": "highlightRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "fid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "highlightRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "fid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

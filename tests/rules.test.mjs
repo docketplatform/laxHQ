@@ -46,6 +46,22 @@ beforeEach(async () => {
   });
 });
 
+// ---- admins and highlight requests ----
+test('admins: you can see only your own admin doc, and nobody can write one', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'admins/alice'), { email: 'a@example.com' });
+    await setDoc(doc(db, 'highlightRequests/r1'), { fid: FID, status: 'new' });
+    await setDoc(doc(db, 'highlightRequests/r2'), { fid: OTHER, status: 'new' });
+  });
+  await assertSucceeds(getDoc(doc(free(), 'admins/alice')));
+  await assertFails(getDoc(doc(outsider(), 'admins/alice')));
+  await assertFails(setDoc(doc(outsider(), 'admins/mallory'), { email: 'm@example.com' }));
+  await assertSucceeds(getDoc(doc(free(), 'highlightRequests/r1')));
+  await assertFails(getDoc(doc(free(), 'highlightRequests/r2')));
+  await assertFails(setDoc(doc(pro(), 'highlightRequests/r3'), { fid: FID }));
+});
+
 // ---- users ----
 test('users: read own doc, not someone else’s', async () => {
   await assertSucceeds(getDoc(doc(free(), 'users/alice')));

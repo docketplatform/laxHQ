@@ -238,6 +238,8 @@ async function startSession(user) {
     await refreshClaims();
     if (state.pendingName) { await call('updateMyName', { name: state.pendingName }).catch(() => {}); state.pendingName = null; }
     await loadConfig();
+    state.isAdmin = await getDoc(doc(db, `admins/${user.uid}`)).then((s) => s.exists()).catch(() => false);
+    $('admin-link').hidden = !state.isAdmin;
     if (params.get('checkout') === 'success') {
       state.flash = null;
       state.ui = { checkoutMsg: 'Welcome to LaxHQ Pro. Your plan unlocks as soon as payment confirms, usually within a few seconds.' };

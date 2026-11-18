@@ -14,6 +14,16 @@ service cloud.firestore {
     function changes()     { return request.resource.data.diff(resource.data).affectedKeys(); }
 
     // ---- users ----
+    // Platform admins: written by scripts/platform-admin.mjs; you can only see your own.
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Highlight reel requests: written by requestHighlights; a family can read its own.
+    match /highlightRequests/{id} {
+      allow read: if signedIn() && resource.data.fid == request.auth.token.fid;
+    }
+
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow update: if signedIn() && request.auth.uid == uid

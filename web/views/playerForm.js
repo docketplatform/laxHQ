@@ -72,7 +72,7 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
     <fieldset class="card"><legend><h2>Stats and film</h2></legend>
       <div class="field"><label for="${id}-season">Season</label><input id="${id}-season" name="stats.season" value="${esc(p.stats?.season)}" placeholder="2026 high school"></div>
       <div class="two">${statKeys.map((k) => `<div class="field"><label for="${id}-st-${k}">${STAT_LABELS[k]}</label><input id="${id}-st-${k}" name="stats.${k}" data-type="number" inputmode="decimal" value="${esc(p.stats?.[k])}"></div>`).join('')}</div>
-      <div class="field"><label for="${id}-film">Highlight film link</label><input id="${id}-film" name="filmUrl" type="url" value="${esc(p.filmUrl)}" placeholder="https://www.hudl.com/…"></div>
+      <div class="field"><label for="${id}-film">Highlight film link</label><input id="${id}-film" name="filmUrl" type="url" value="${esc(p.filmUrl)}" placeholder="https://www.hudl.com/…"><span class="small">Shown first on the recruiting card. No reel yet? <a href="#/highlights">Get one made</a>.</span></div>
     </fieldset>` : ''}
 
     <p id="${id}-msg" role="status" aria-live="polite"></p>

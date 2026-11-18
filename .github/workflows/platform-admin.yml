@@ -1,0 +1,43 @@
+name: Platform admin
+
+# Run by hand (Actions → Platform admin → Run workflow) to give a login the Admin area.
+# Only people with write access to the repo can run it.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Email the person signs in with (they must have signed in once)
+        required: true
+      action:
+        description: grant or revoke
+        type: choice
+        options: [grant, revoke]
+        default: grant
+
+permissions:
+  contents: read
+
+jobs:
+  admin:
+    if: vars.FIREBASE_PROJECT != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hide the email in the logs
+        run: echo "::add-mask::$ADMIN_EMAIL"
+        env:
+          ADMIN_EMAIL: ${{ inputs.email }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: node scripts/platform-admin.mjs "$ADMIN_ACTION"
+        env:
+          GCLOUD_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          ADMIN_EMAIL: ${{ inputs.email }}
+          ADMIN_ACTION: ${{ inputs.action }}

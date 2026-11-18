@@ -60,8 +60,8 @@ p{margin:0}
 .err{color:var(--red);font-size:14px}
 .ok{color:var(--green);font-size:14px}
 .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:5;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
-.tabbar nav{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
-.tabbar a{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:48px;justify-content:center;font-size:11px;color:var(--muted);text-decoration:none}
+.tabbar nav{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:48px;justify-content:center;font-size:10.5px;white-space:nowrap;color:var(--muted);text-decoration:none}
 .tabbar a[aria-current="page"]{color:var(--ink);font-weight:700}
 .tabbar svg{width:22px;height:22px}
 .signin{min-height:100vh;display:flex;flex-direction:column;justify-content:center;gap:18px;padding:24px 16px;max-width:420px;margin:0 auto}
@@ -165,6 +165,16 @@ body.public,#public{background:#E9EDF3}
 }
 
 .link-card{text-decoration:none;color:inherit}
+.admin-link{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--soft);color:var(--soft);text-decoration:none}
+.admin-line{padding:6px 0;border-top:1px solid var(--line)}
+.admin-totals{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
+.hl-hero{border:2px solid var(--orange)}
+.hl-hero .lead{font-size:17px;font-weight:600}
+.hl-list{margin:6px 0 0;padding-left:20px}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.ok-banner{display:block;background:#D9F4E6;color:#11643C}
+.promo-card{background:var(--ink);color:#fff;border-color:var(--ink)}
+.promo-card .small,.promo-card p{color:#C9D3E0}
 .target-card .link-card{display:block}.target-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--line, #E3E8EF);justify-content:flex-end}
 .link-card:hover{border-color:#B8C2D0}
 .fits{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -210,7 +220,7 @@ button,input,select,textarea{font:inherit}
 <div id="app" class="app" hidden>
   <header class="top">
     <div class="logo">LAX<span>HQ</span></div>
-    <span id="plan-badge" class="plan-badge">Free</span>
+    <span class="row" style="gap:8px"><a id="admin-link" class="admin-link" href="#/admin" hidden>Admin</a><span id="plan-badge" class="plan-badge">Free</span></span>
   </header>
   <main id="view" tabindex="-1"></main>
   <div class="tabbar">
@@ -219,6 +229,7 @@ button,input,select,textarea{font:inherit}
       <a href="#/schools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-5 9 5-9 5z"/><path d="M7 12v5c3 2 7 2 10 0v-5"/></svg>Schools</a>
       <a href="#/coaches"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Coaches</a>
       <a href="#/events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Events</a>
+      <a href="#/highlights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3z"/></svg>Highlights</a>
       <a href="#/profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</a>
     </nav>
   </div>

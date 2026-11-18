@@ -64,7 +64,7 @@ export function cardSectionHtml(ctx, p) {
   const url = cardUrl(p.cardSlug);
   return `<section class="card" id="card-section">
     <div class="row"><h2>Recruiting card</h2><span class="chip ${p.cardPublished ? 'c-likely' : 'c-muted'}">${p.cardPublished ? 'Live link' : 'Off'}</span></div>
-    <p class="small">One link with film, stats, GPA and summer schedule.</p>
+    <p class="small">One link with film, stats, GPA and summer schedule.${p.filmUrl ? '' : ' <b>No highlight film yet:</b> <a href="#/highlights">get a reel made</a>, then paste its link into Film above.'}</p>
     <label class="check" style="align-self:flex-start"><input type="checkbox" id="card-publish"${p.cardPublished ? ' checked' : ''}> Share ${esc(p.firstName)}’s card</label>
     <div class="field"><label for="card-name">Name on the card</label><select id="card-name">
       <option value="full"${p.cardNameStyle !== 'initial' ? ' selected' : ''}>Full name (${esc(`${p.firstName} ${p.lastName}`)})</option>

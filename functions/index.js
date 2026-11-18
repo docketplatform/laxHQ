@@ -439,3 +439,12 @@ const account = require('./account');
 account.init({ requireAuth, stripeClient: billing.stripeClient });
 exports.deleteAccount = account.deleteAccount;
 exports.backupFirestore = account.backupFirestore;
+
+// ---------- platform admin and highlight reels ----------
+const adminArea = require('./admin');
+
+adminArea.init({ requireAuth });
+exports.adminOverview = adminArea.adminOverview;
+exports.adminSaveHighlightPartner = adminArea.adminSaveHighlightPartner;
+exports.adminUpdateHighlightRequest = adminArea.adminUpdateHighlightRequest;
+exports.requestHighlights = adminArea.requestHighlights;

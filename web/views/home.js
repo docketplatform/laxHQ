@@ -33,6 +33,17 @@ function alertsHtml(ctx) {
     <button class="link" data-dismiss="${esc(a.id)}" aria-label="Dismiss: ${esc(a.title)}">Dismiss</button></div>`).join('')}</div></section>`;
 }
 
+/** The highlight-reel offer: the most-watched part of a recruiting profile. */
+function reelPromo(p) {
+  const has = Boolean(p?.filmUrl);
+  return `<a class="card link-card promo-card" href="#/highlights" id="reel-promo">
+    <span class="small caps">Highlight reel</span>
+    <h2>${has ? `${esc(p.firstName)}’s reel is on the card` : 'Coaches watch film first'}</h2>
+    <p>${has ? 'Time for a new one with this season’s film? Work with our preferred editor.' : 'Get a recruiting highlight reel made by our preferred editor, then put it on your recruiting card.'}</p>
+    <span class="btn btn-primary btn-sm" style="align-self:flex-start">${has ? 'Update the reel' : 'Get a highlight reel'}</span>
+  </a>`;
+}
+
 export default {
   render(ctx) {
     const p = ctx.currentPlayer();
@@ -43,7 +54,7 @@ export default {
           <div class="card"><h2>Set up your player</h2><p class="muted">Grad year, position, school and club. Your countdown and plan build from it.</p>
           <a class="btn btn-primary" href="#/onboarding">${getDraft() ? 'Finish setting up' : 'Set up my player'}</a></div>`;
       }
-      return welcome + sampleViews.home();
+      return welcome + sampleViews.home() + reelPromo(null);
     }
     if (!ctx.state.template || !ctx.state.checklist) return '<p class="muted" role="status">Loading your plan…</p>';
     const plan = buildPlan(ctx.state.template, p, ctx.state.checklist);
@@ -67,7 +78,8 @@ export default {
       <div class="card"><div class="row"><h2>This week</h2><a href="#/plan">Full plan</a></div>
         ${plan.thisWeek.length ? `<div class="list">${plan.thisWeek.map((i) => checklistItemHtml(i, ctx)).join('')}</div>`
     : '<p class="muted">Nothing due right now. Look ahead in the full plan.</p>'}
-      </div>`;
+      </div>
+      ${reelPromo(p)}`;
   },
   bind(ctx) {
     bindSwitcher(ctx); bindChecklist(ctx);
