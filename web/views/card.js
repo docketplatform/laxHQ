@@ -7,6 +7,9 @@ import { positionLabel, STAT_LABELS, STATS_BY_POSITION } from '../lib/options.js
 const ORIGIN = location.origin;
 export const cardUrl = (slug, token) => `${ORIGIN}/c/${slug}${token ? `?r=${encodeURIComponent(token)}` : ''}`;
 
+/** Name shown on the card (cards built before names were configurable have no `name`). */
+const cardTitle = (c) => c.name || `${c.firstName} ${c.lastInitial}.`;
+
 /** The card itself, shared by the public page and the preview on the Profile tab. */
 export function cardHtml(c) {
   const keys = [...(STATS_BY_POSITION[c.position] || []), ...Object.keys(c.stats || {})]
@@ -17,7 +20,7 @@ export function cardHtml(c) {
     ${c.filmUrl ? `<a class="rfilm" href="${esc(c.filmUrl)}" target="_blank" rel="noopener"><span class="play" aria-hidden="true"></span><span>Watch highlight film</span></a>`
     : '<div class="rfilm none"><span>Highlight film coming soon</span></div>'}
     <div class="rbody">
-      <div class="row"><div><h1 class="rname">${esc(c.firstName)} ${esc(c.lastInitial)}.</h1>
+      <div class="row"><div><h1 class="rname">${esc(cardTitle(c))}</h1>
         <p class="rmeta">${esc(positionLabel(c.sport, c.position))} · Class of ${esc(c.gradYear)}${c.sport === 'wlax' ? ' · Women’s lacrosse' : ''}</p></div>
         ${c.jersey ? `<span class="rjersey">#${esc(c.jersey)}</span>` : ''}</div>
       ${statCells.length ? `<div class="rstats">${statCells.join('')}</div>${c.statsSeason ? `<p class="rmeta">Stats: ${esc(c.statsSeason)}</p>` : ''}` : ''}
@@ -27,7 +30,7 @@ export function cardHtml(c) {
         ${(c.summer || []).length ? `<div><dt>Summer</dt><dd>${c.summer.map((s) => esc(s)).join(' · ')}</dd></div>` : ''}
         ${(c.rankings || []).map((r) => `<div><dt>${esc(r.source)}</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.value)}</a>` : esc(r.value)} <span class="rself">self-reported</span></dd></div>`).join('')}
       </dl>
-      ${c.contactEmail ? `<a class="btn btn-primary btn-block" href="mailto:${esc(c.contactEmail)}?subject=${encodeURIComponent(`${c.firstName} ${c.lastInitial}. · Class of ${c.gradYear}`)}">Contact the family</a>` : ''}
+      ${c.contactEmail ? `<a class="btn btn-primary btn-block" href="mailto:${esc(c.contactEmail)}?subject=${encodeURIComponent(`${cardTitle(c)} · Class of ${c.gradYear}`)}">Contact the family</a>` : ''}
     </div>
   </article>`;
 }
@@ -44,7 +47,7 @@ export async function renderPublicCard(slug) {
       <p class="muted">The family may have turned off sharing. Ask them for a new link.</p></div>`;
     return;
   }
-  document.title = `${card.firstName} ${card.lastInitial}. · Class of ${card.gradYear} · LaxHQ`;
+  document.title = `${cardTitle(card)} · Class of ${card.gradYear} · LaxHQ`;
   root.innerHTML = `<div class="pwrap">${cardHtml(card)}
     <p class="pfoot">Made with <a href="https://laxhq.netlify.app" rel="noopener">LaxHQ</a> · college recruiting game plan for lacrosse families</p></div>`;
   // Count the view. Runs only in a real browser, which keeps most email link scanners out.
@@ -61,8 +64,12 @@ export function cardSectionHtml(ctx, p) {
   const url = cardUrl(p.cardSlug);
   return `<section class="card" id="card-section">
     <div class="row"><h2>Recruiting card</h2><span class="chip ${p.cardPublished ? 'c-likely' : 'c-muted'}">${p.cardPublished ? 'Live link' : 'Off'}</span></div>
-    <p class="small">One link with film, stats, GPA and summer schedule. Coaches see first name and last initial only.</p>
+    <p class="small">One link with film, stats, GPA and summer schedule.</p>
     <label class="check" style="align-self:flex-start"><input type="checkbox" id="card-publish"${p.cardPublished ? ' checked' : ''}> Share ${esc(p.firstName)}’s card</label>
+    <div class="field"><label for="card-name">Name on the card</label><select id="card-name">
+      <option value="full"${p.cardNameStyle !== 'initial' ? ' selected' : ''}>Full name (${esc(`${p.firstName} ${p.lastName}`)})</option>
+      <option value="initial"${p.cardNameStyle === 'initial' ? ' selected' : ''}>First name and last initial (${esc(`${p.firstName} ${(p.lastName || '').slice(0, 1)}.`)})</option>
+    </select></div>
     ${p.cardPublished ? `
       <div class="copy"><input id="card-link" readonly value="${esc(url)}" aria-label="Card link"><button class="btn btn-primary" id="copy-card">Copy</button></div>
       <div class="row start wrap"><a class="btn btn-ghost btn-sm" href="${esc(url)}" target="_blank" rel="noopener">Open card</a><button class="btn btn-ghost btn-sm" id="print-card">Export PDF</button></div>
@@ -78,6 +85,12 @@ export function bindCardSection(ctx) {
       await ctx.call('updatePlayer', { playerId: ctx.currentPlayer().id, cardPublished: e.target.checked });
       ctx.setUi('cardMsg', { text: e.target.checked ? 'Your card is live.' : 'Sharing is off. Old links now show “not available”.' });
     } catch (err) { e.target.checked = !e.target.checked; ctx.setUi('cardMsg', { text: err.message, bad: true }); }
+  });
+  $('card-name')?.addEventListener('change', async (e) => {
+    try {
+      await ctx.call('updatePlayer', { playerId: ctx.currentPlayer().id, cardNameStyle: e.target.value });
+      ctx.setUi('cardMsg', { text: e.target.value === 'full' ? 'The card now shows the full name.' : 'The card now shows the first name and last initial.' });
+    } catch (err) { ctx.setUi('cardMsg', { text: err.message, bad: true }); }
   });
   $('copy-card')?.addEventListener('click', async () => {
     $('card-link').select();

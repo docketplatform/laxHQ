@@ -26,18 +26,26 @@ try {
   // A coach opens the link in their own browser, not signed in.
   const coach = await run.page('coach', { width: 1280, height: 900 }, { userAgent: DESKTOP_CHROME });
   await coach.goto(link.replace(/^https?:\/\/[^/]+\//, BASE));
-  await coach.getByRole('heading', { name: 'Eli P.' }).waitFor({ timeout: 15000 });
+  await coach.getByRole('heading', { name: 'Eli Park' }).waitFor({ timeout: 15000 });
   const text = await coach.locator('.rcard').innerText();
   assert.match(text, /Attack · Class of 2028/);
   assert.match(text, /#9/);
   assert.match(text, /44\s*Goals/);
   assert.match(text, /3\.8\s*GPA/);
   assert.match(text, /Garden City HS, NY/);
-  assert.doesNotMatch(text, /Park\b/, 'last name stays private');
+
   if (SHOTS) await coach.screenshot({ path: `${SHOTS}/10-public-card.png`, fullPage: true });
 
   // The family sees the view.
   await page.locator('#card-stats', { hasText: /Views, 30 days\s*1/ }).waitFor({ timeout: 15000 });
+
+  // The family can switch to first name + last initial.
+  await page.selectOption('#card-name', 'initial');
+  await page.getByText('The card now shows the first name and last initial.').waitFor();
+  await page.waitForTimeout(1500);
+  await coach.reload();
+  await coach.getByRole('heading', { name: 'Eli P.' }).waitFor({ timeout: 15000 });
+  assert.doesNotMatch(await coach.locator('.rcard').innerText(), /Park\b/, 'last name hidden when chosen');
 
   // Turning sharing off makes the link show "not available".
   await page.uncheck('#card-publish');
@@ -47,7 +55,7 @@ try {
   await coach.getByText('This card isn’t available').waitFor({ timeout: 10000 });
 
   assert.deepEqual(run.errors, [], run.errors.join('; '));
-  console.log('e2e card: publish, public page, private last name, view counted, unpublish ✔');
+  console.log('e2e card: publish, public page, full name or last initial, view counted, unpublish ✔');
 } finally {
   await run.close();
 }

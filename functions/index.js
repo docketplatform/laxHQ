@@ -352,10 +352,14 @@ exports.updatePlayer = onCall(async (req) => {
   if (Object.prototype.hasOwnProperty.call(fields, 'cardPublished')) {
     fields.cardPublished = Boolean(fields.cardPublished);
   }
-  const { cardPublished, ...profile } = fields;
+  if (fields.cardNameStyle !== undefined && !['full', 'initial'].includes(fields.cardNameStyle)) {
+    throw new HttpsError('invalid-argument', 'cardNameStyle must be full or initial.');
+  }
+  const { cardPublished, cardNameStyle, ...profile } = fields;
   let clean;
-  try { clean = validatePlayer(profile, { partial: true }); } catch (e) { throw toHttpsError(e); }
+  try { clean = Object.keys(profile).length ? validatePlayer(profile, { partial: true }) : {}; } catch (e) { throw toHttpsError(e); }
   if (cardPublished !== undefined) clean.cardPublished = cardPublished;
+  if (cardNameStyle !== undefined) clean.cardNameStyle = cardNameStyle;
   if (!Object.keys(clean).length) throw new HttpsError('invalid-argument', 'Nothing to update.');
 
   const ref = db.doc(`families/${fid}/players/${playerId}`);

@@ -15,13 +15,29 @@ const db = getFirestore();
 
 const STAT_KEYS = ['goals', 'assists', 'groundBalls', 'causedTO', 'saves', 'savePct', 'faceoffPct', 'drawControls'];
 
-/** The public card for a player. Only shareable fields; first name + last initial. */
+/**
+ * The name on the card. Full name unless the family chose first name + last initial
+ * (player.cardNameStyle === 'initial'); then the last name never reaches the card.
+ */
+function cardName(player) {
+  const first = player.firstName || '';
+  const last = player.lastName || '';
+  const initial = last.slice(0, 1).toUpperCase();
+  const full = player.cardNameStyle !== 'initial';
+  return {
+    firstName: first,
+    lastInitial: initial,
+    lastName: full ? last : null,
+    name: full ? `${first} ${last}`.trim() : `${first} ${initial}${initial ? '.' : ''}`.trim(),
+  };
+}
+
+/** The public card for a player. Only shareable fields. */
 function buildCard(player, { contactEmail, summer = [] } = {}) {
   const stats = {};
   for (const k of STAT_KEYS) if (player.stats && player.stats[k] != null) stats[k] = player.stats[k];
   return {
-    firstName: player.firstName || '',
-    lastInitial: (player.lastName || '').slice(0, 1).toUpperCase(),
+    ...cardName(player),
     sport: player.sport || null,
     position: player.position || null,
     gradYear: player.gradYear || null,
@@ -147,4 +163,5 @@ const cardView = onRequest({ cors: true }, async (req, res) => {
   res.json({ counted });
 });
 
-module.exports = { onPlayerWrite, cardView, buildCard, applyView, BOT_UA };
+module.exports = {
+  cardName, onPlayerWrite, cardView, buildCard, applyView, BOT_UA };

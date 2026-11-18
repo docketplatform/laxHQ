@@ -15,8 +15,8 @@ test('the card carries only shareable fields', () => {
     rankings: [{ source: 'IL', value: '3 stars', url: null, selfReported: true }], filmUrl: 'https://hudl.com/x',
     cardStats: { views30d: 3 }, teamIds: ['t1'], createdBy: 'uid',
   }, { contactEmail: 'pat@example.com' });
-  assert.equal(c.lastInitial, 'M');
-  assert.equal(c.lastName, undefined);
+  assert.equal(c.name, 'Jake Morrison');
+  assert.equal(c.lastName, 'Morrison');
   assert.equal(c.gpa, 3.7);
   assert.equal(c.sat, undefined);
   assert.deepEqual(c.stats, { goals: 31 });
@@ -45,4 +45,11 @@ test('link scanners and bots are recognized', () => {
   for (const ua of ['Mozilla/5.0 (compatible; Googlebot/2.1)', 'Microsoft Office SafeLinks', 'Slackbot-LinkExpanding 1.0', 'curl/8.0', 'python-requests/2.31', 'HeadlessChrome/120'])
     assert.ok(BOT_UA.test(ua), ua);
   assert.ok(!BOT_UA.test('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'));
+});
+
+test('a family can show first name and last initial only', () => {
+  const c = buildCard({ firstName: 'Jake', lastName: 'Morrison', cardNameStyle: 'initial', gradYear: 2029 });
+  assert.equal(c.name, 'Jake M.');
+  assert.equal(c.lastName, null);
+  assert.equal(JSON.stringify(c).includes('Morrison'), false);
 });

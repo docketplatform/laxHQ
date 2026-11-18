@@ -240,8 +240,8 @@ test('publishing builds the public card; unpublishing removes it', async () => {
   await a.call('updatePlayer', { playerId, cardPublished: true });
   const card = await until(async () => { const c = await adb.doc(`cards/${slug}`).get(); return c.exists && c.data(); });
   assert.equal(card.firstName, 'Jake');
-  assert.equal(card.lastInitial, 'M');
-  assert.equal(card.lastName, undefined);
+  assert.equal(card.name, 'Jake Morrison');
+  assert.equal(card.lastName, 'Morrison');
   assert.equal(card.sat, undefined);
   assert.equal(card.gpa, 3.7);
   assert.match(card.contactEmail, /@example\.com$/);
