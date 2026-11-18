@@ -44,8 +44,29 @@ test('partial updates only validate the fields sent', () => {
 
 test('videos: up to 8, each needs a link, unknown types become other', () => {
   const out = validatePlayer({ ...base, videos: [{ title: 'Game', url: 'https://vimeo.com/1', kind: 'game' }, { url: 'https://youtu.be/x', kind: 'weird' }, {}] });
-  assert.deepEqual(out.videos, [{ title: 'Game', url: 'https://vimeo.com/1', kind: 'game' }, { title: null, url: 'https://youtu.be/x', kind: 'other' }]);
+  assert.deepEqual(out.videos, [{ title: 'Game', url: 'https://vimeo.com/1', kind: 'game', date: null }, { title: null, url: 'https://youtu.be/x', kind: 'other', date: null }]);
+  assert.equal(validatePlayer({ ...base, videos: [{ url: 'https://youtu.be/x', date: '2026-07' }] }).videos[0].date, '2026-07');
+  assert.equal(validatePlayer({ ...base, videos: [{ url: 'https://youtu.be/x', date: 'July' }] }).videos[0].date, null);
   assert.throws(() => validatePlayer({ ...base, videos: [{ title: 'No link' }] }), /link for video 1/);
   assert.throws(() => validatePlayer({ ...base, videos: [{ url: 'javascript:alert(1)' }] }), /web link|https/);
   assert.equal(validatePlayer({ ...base, videos: Array.from({ length: 12 }, (_, i) => ({ url: `https://youtu.be/v${i}` })) }).videos.length, 8);
+});
+
+test('card profile: positions, height, hand, hometown, statement, honors, social, jerseys', () => {
+  const out = validatePlayer({
+    ...base, position: 'attack', otherPositions: ['midfield', 'attack', 'midfield', 'nope'], heightIn: '66', hand: 'R',
+    hometown: { city: 'Maplewood', state: 'NJ' }, statement: '  Two-way player.  \n\n\n\nVarsity starter. ', honors: ['All-Conference', '', 'Team MVP'],
+    social: { x: '@jake_m', instagram: 'https://www.instagram.com/jake.m/' }, highSchool: { name: 'CHS', jersey: '13' }, club: { name: 'BBL', jersey: '7' },
+    academics: { gpa: 3.9, showTests: true, sat: 1400 },
+  });
+  assert.deepEqual(out.otherPositions, ['midfield']);
+  assert.equal(out.heightIn, 66); assert.equal(out.hand, 'R');
+  assert.equal(out.statement, 'Two-way player.\n\nVarsity starter.');
+  assert.deepEqual(out.honors, ['All-Conference', 'Team MVP']);
+  assert.deepEqual(out.social, { x: 'jake_m', instagram: 'jake.m' });
+  assert.equal(out.highSchool.jersey, '13'); assert.equal(out.club.jersey, '7'); assert.equal(out.academics.showTests, true);
+  assert.throws(() => validatePlayer({ ...base, heightIn: 120 }), /Height/);
+  assert.throws(() => validatePlayer({ ...base, hand: 'X' }), /hand/);
+  assert.throws(() => validatePlayer({ ...base, social: { x: 'not a handle!' } }), /@name/);
+  assert.throws(() => validatePlayer({ ...base, statement: 'x'.repeat(1600) }), /too long/);
 });

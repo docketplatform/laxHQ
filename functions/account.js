@@ -32,7 +32,7 @@ async function deleteFamilyData(fid, { stripeClient } = {}) {
     const slug = p.get('cardSlug');
     if (slug) {
       await db.recursiveDelete(db.doc(`cardViews/${slug}`)).catch(() => {});
-      await Promise.all([db.doc(`cards/${slug}`).delete(), db.doc(`cardSlugs/${slug}`).delete()]);
+      await Promise.all([db.doc(`cards/${slug}`).delete(), db.doc(`cardSlugs/${slug}`).delete(), db.doc(`cardCounts/${slug}`).delete()]);
     }
     const tokens = await db.collection('cardTokens').where('pid', '==', p.id).get();
     await Promise.all(tokens.docs.filter((t) => t.get('fid') === fid).map((t) => t.ref.delete()));

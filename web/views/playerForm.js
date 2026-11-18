@@ -30,14 +30,36 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
       <fieldset class="field"><legend class="label">Divisions you’re open to</legend>
         <div class="checks">${DIVISIONS.map((d) => `<label class="check"><input type="checkbox" name="openDivisions[]" value="${d}"${(p.openDivisions || DIVISIONS).includes(d) ? ' checked' : ''}> ${d}</label>`).join('')}</div>
       </fieldset>
-      ${full ? `<div class="field"><label for="${id}-jersey">Jersey number</label><input id="${id}-jersey" name="jersey" value="${esc(p.jersey)}" maxlength="3" inputmode="numeric"></div>` : ''}
+      ${full ? `<fieldset class="field"><legend class="label">Other positions</legend>
+        <div class="checks">${POSITIONS[sport].filter((o) => o.value !== p.position).map((o) => `<label class="check"><input type="checkbox" name="otherPositions[]" value="${o.value}"${(p.otherPositions || []).includes(o.value) ? ' checked' : ''}> ${esc(o.label)}</label>`).join('')}</div>
+      </fieldset>
+      <div class="three">
+        <div class="field"><label for="${id}-jersey">Jersey number</label><input id="${id}-jersey" name="jersey" value="${esc(p.jersey)}" maxlength="3" inputmode="numeric"></div>
+        <div class="field"><label for="${id}-height">Height</label><select id="${id}-height" name="heightIn" data-type="number">${options(Array.from({ length: 31 }, (_, i) => 56 + i).map((n) => ({ value: n, label: `${Math.floor(n / 12)}′${n % 12}″` })), p.heightIn, { blank: 'Choose' })}</select></div>
+        <div class="field"><label for="${id}-hand">Dominant hand</label><select id="${id}-hand" name="hand">${options([{ value: 'R', label: 'Right' }, { value: 'L', label: 'Left' }, { value: 'B', label: 'Both' }], p.hand, { blank: 'Choose' })}</select></div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="${id}-htc">Hometown</label><input id="${id}-htc" name="hometown.city" value="${esc(p.hometown?.city)}" maxlength="60" placeholder="City"></div>
+        <div class="field"><label for="${id}-hts">State</label><select id="${id}-hts" name="hometown.state">${options(STATES, p.hometown?.state, { blank: 'Choose' })}</select></div>
+      </div>` : ''}
     </fieldset>
+
+    ${full ? `<fieldset class="card"><legend><h2>About ${esc(p.firstName || 'your player')}</h2></legend>
+      <p class="small">Shown on the recruiting card. Write it in the player’s own voice: who they are as a player, what they bring, and what they’re looking for.</p>
+      <div class="field"><label for="${id}-stmt">Personal statement</label><textarea id="${id}-stmt" name="statement" maxlength="1500" rows="6" placeholder="I’m a two-way midfielder who…">${esc(p.statement)}</textarea></div>
+      <div class="field"><label for="${id}-honors">Honors and awards (one per line)</label><textarea id="${id}-honors" name="honors" rows="4" placeholder="Second Team All-Conference (2026)&#10;Team MVP">${esc((p.honors || []).join('\n'))}</textarea></div>
+      <div class="two">
+        <div class="field"><label for="${id}-x">X (Twitter)</label><input id="${id}-x" name="social.x" value="${esc(p.social?.x ? `@${p.social.x}` : '')}" maxlength="120" placeholder="@handle"></div>
+        <div class="field"><label for="${id}-ig">Instagram</label><input id="${id}-ig" name="social.instagram" value="${esc(p.social?.instagram ? `@${p.social.instagram}` : '')}" maxlength="120" placeholder="@handle"></div>
+      </div>
+    </fieldset>` : ''}
 
     <fieldset class="card"><legend><h2>School and grades</h2></legend>
       <div class="two">
         <div class="field"><label for="${id}-hs">High school</label><input id="${id}-hs" name="highSchool.name" value="${esc(hs.name)}" maxlength="100"></div>
         <div class="field"><label for="${id}-hss">State</label><select id="${id}-hss" name="highSchool.state">${options(STATES, hs.state, { blank: 'Choose' })}</select></div>
       </div>
+      ${full ? `<div class="field"><label for="${id}-hsj">High school jersey number</label><input id="${id}-hsj" name="highSchool.jersey" value="${esc(hs.jersey)}" maxlength="3" inputmode="numeric"></div>` : ''}
       <div class="two">
         <div class="field"><label for="${id}-gpa">GPA</label><input id="${id}-gpa" name="academics.gpa" data-type="number" inputmode="decimal" value="${esc(ac.gpa)}" placeholder="3.7"></div>
         <div class="field"><label for="${id}-scale">GPA scale</label><select id="${id}-scale" name="academics.gpaScale" data-type="number">${options([{ value: 4, label: 'Out of 4.0' }, { value: 5, label: 'Out of 5.0' }], ac.gpaScale || 4)}</select></div>
@@ -46,7 +68,8 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
       ${full ? `<div class="two">
         <div class="field"><label for="${id}-sat">SAT (optional)</label><input id="${id}-sat" name="academics.sat" data-type="number" inputmode="numeric" value="${esc(ac.sat)}"></div>
         <div class="field"><label for="${id}-act">ACT (optional)</label><input id="${id}-act" name="academics.act" data-type="number" inputmode="numeric" value="${esc(ac.act)}"></div>
-      </div>` : ''}
+      </div>
+      <label class="check"><input type="checkbox" name="academics.showTests"${ac.showTests ? ' checked' : ''}> Show test scores on the recruiting card</label>` : ''}
     </fieldset>
 
     <fieldset class="card"><legend><h2>Club team</h2></legend>
@@ -55,6 +78,7 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
         <div class="field"><label for="${id}-team">Team</label><input id="${id}-team" name="club.team" value="${esc(club.team)}" maxlength="40" placeholder="2029"></div>
         <div class="field"><label for="${id}-level">Level</label><select id="${id}-level" name="club.level">${options(CLUB_LEVELS, club.level, { blank: 'Choose' })}</select></div>
       </div>
+      ${full ? `<div class="field"><label for="${id}-cj">Club jersey number</label><input id="${id}-cj" name="club.jersey" value="${esc(club.jersey)}" maxlength="3" inputmode="numeric"></div>` : ''}
       <div class="checks">
         <label class="check"><input type="checkbox" name="athletic.varsityStarter"${p.athletic?.varsityStarter ? ' checked' : ''}> Varsity starter</label>
         <label class="check"><input type="checkbox" name="athletic.allConference"${p.athletic?.allConference ? ' checked' : ''}> All-conference or all-state</label>
@@ -79,12 +103,19 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
     <fieldset class="card" id="${id}-videos"><legend><h2>Videos</h2></legend>
       <p class="small">They play right on the recruiting card. Paste links from Hudl, YouTube, Vimeo or Google Drive (set it to “Anyone with the link”). For Hudl, use the video’s full address (hudl.com/video/…).</p>
       <div class="field"><label for="${id}-film">Main highlight reel</label><input id="${id}-film" name="filmUrl" type="url" value="${esc(p.filmUrl)}" placeholder="https://www.hudl.com/video/…"><span class="small">Plays first on the card. No reel yet? <a href="#/highlights">Get one made</a>.</span></div>
+      <div class="two">
+        <div class="field"><label for="${id}-ftitle">Reel title</label><input id="${id}-ftitle" name="filmTitle" value="${esc(p.filmTitle)}" maxlength="80" placeholder="Summer 2026 highlights"></div>
+        <div class="field"><label for="${id}-fdate">Filmed</label><input id="${id}-fdate" name="filmDate" type="month" value="${esc(p.filmDate)}"></div>
+      </div>
       ${videoRows.map((v, i) => `<div class="video-row">
         <div class="two">
           <div class="field"><label for="${id}-vt${i}">Video ${i + 2} title</label><input id="${id}-vt${i}" name="videos.${i}.title" maxlength="80" value="${esc(v.title)}" placeholder="${i === 0 ? 'vs. Chesapeake Elite, full game' : 'Fall ball 2026'}"></div>
           <div class="field"><label for="${id}-vk${i}">Type</label><select id="${id}-vk${i}" name="videos.${i}.kind">${options(VIDEO_KINDS, v.kind || (i === 0 ? 'game' : 'highlight'))}</select></div>
         </div>
-        <div class="field"><label for="${id}-vu${i}">Link</label><input id="${id}-vu${i}" name="videos.${i}.url" type="url" value="${esc(v.url)}" placeholder="https://"></div>
+        <div class="two">
+          <div class="field"><label for="${id}-vu${i}">Link</label><input id="${id}-vu${i}" name="videos.${i}.url" type="url" value="${esc(v.url)}" placeholder="https://"></div>
+          <div class="field"><label for="${id}-vd${i}">Filmed</label><input id="${id}-vd${i}" name="videos.${i}.date" type="month" value="${esc(v.date)}"></div>
+        </div>
       </div>`).join('')}
       ${videoRows.length < 8 ? '<p class="small">Save to get room for another video.</p>' : ''}
     </fieldset>` : ''}
@@ -103,8 +134,11 @@ export function cleanPlayerInput(raw) {
   }
   if (out.videos) {
     out.videos = Object.values(out.videos).filter((v) => v && (v.url || v.title))
-      .map((v) => ({ title: v.title || null, url: v.url || null, kind: v.kind || 'other' }));
+      .map((v) => ({ title: v.title || null, url: v.url || null, kind: v.kind || 'other', date: v.date || null }));
   }
+  if (typeof out.honors === 'string') out.honors = out.honors.split('\n').map((h) => h.trim()).filter(Boolean);
+  if (out.otherPositions) out.otherPositions = out.otherPositions.filter((x) => x !== out.position);
+  if (out.filmDate === '') out.filmDate = null;
   if (out.stats) {
     const s = {}; for (const [k, v] of Object.entries(out.stats)) if (v !== null && v !== undefined) s[k] = v;
     out.stats = s;

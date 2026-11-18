@@ -295,6 +295,9 @@ test('card views: counted once per viewer, bots ignored, coach tokens attributed
   assert.equal(st2.total, 3, 'plays are not card views');
   assert.equal(st2.recentVideoViews[0].schoolName, 'Tufts University');
   assert.equal(st2.recentVideoViews[0].title, 'Full game');
+  const counts = (await adb.doc(`cardCounts/${slug}`).get()).get('videos');
+  assert.equal(counts['https://youtu.be/aaaaaaaaaaa'], 1);
+  assert.equal(counts['https://vimeo.com/1'], 1);
   const alerts = await pref.collection('alerts').where('type', '==', 'video_watched').get();
   assert.equal(alerts.size, 1);
   assert.match(alerts.docs[0].get('title'), /A coach at Tufts University watched Jake’s Full game/);

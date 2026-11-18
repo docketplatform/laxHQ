@@ -75,3 +75,19 @@ test('video plays roll up by day and remember which school watched what', () => 
   const later = applyVideoPlay(st, { now: new Date('2027-01-20T12:00:00Z'), title: 'x' });
   assert.equal(later.videoPlays30d, 1, 'old days drop out');
 });
+
+test('the card carries the profile details, and test scores only when the family opts in', () => {
+  const p = {
+    firstName: 'Jake', lastName: 'Morrison', position: 'attack', otherPositions: ['midfield'], heightIn: 70, hand: 'L',
+    hometown: { city: 'Annapolis', state: 'MD' }, statement: 'Hi coaches', honors: ['MVP'], social: { x: 'jake', instagram: null },
+    athletic: { varsityStarter: true }, academics: { gpa: 3.8, weighted: true, sat: 1400, showTests: false },
+    club: { name: 'Elite', jersey: '7' }, highSchool: { name: 'Severn', jersey: '13', ncesId: 'x' },
+  };
+  const c = buildCard(p);
+  assert.deepEqual(c.otherPositions, ['midfield']); assert.equal(c.heightIn, 70); assert.equal(c.hand, 'L');
+  assert.equal(c.statement, 'Hi coaches'); assert.deepEqual(c.badges, ['Varsity starter']);
+  assert.equal(c.club.jersey, '7'); assert.equal(c.highSchool.jersey, '13'); assert.equal(c.highSchool.ncesId, undefined);
+  assert.equal(c.tests, null, 'scores hidden unless shown');
+  assert.equal(c.gpaWeighted, true);
+  assert.deepEqual(buildCard({ ...p, academics: { ...p.academics, showTests: true } }).tests, { sat: 1400, act: null });
+});

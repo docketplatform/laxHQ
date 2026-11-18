@@ -35,8 +35,8 @@ function cardName(player) {
 /** Videos on the card: the main reel (filmUrl) first, then the extra videos. */
 function cardVideos(player) {
   const list = [];
-  if (player.filmUrl) list.push({ title: 'Highlight reel', url: player.filmUrl, kind: 'highlight' });
-  for (const v of player.videos || []) if (v?.url && v.url !== player.filmUrl) list.push({ title: v.title || null, url: v.url, kind: v.kind || 'other' });
+  if (player.filmUrl) list.push({ title: player.filmTitle || 'Highlight reel', url: player.filmUrl, kind: 'highlight', date: player.filmDate || null });
+  for (const v of player.videos || []) if (v?.url && v.url !== player.filmUrl) list.push({ title: v.title || null, url: v.url, kind: v.kind || 'other', date: v.date || null });
   return list.slice(0, 9);
 }
 
@@ -48,10 +48,20 @@ function buildCard(player, { contactEmail, summer = [] } = {}) {
     ...cardName(player),
     sport: player.sport || null,
     position: player.position || null,
+    otherPositions: player.otherPositions || [],
+    heightIn: player.heightIn ?? null,
+    hand: player.hand || null,
+    hometown: player.hometown?.city ? { city: player.hometown.city, state: player.hometown.state || null } : null,
+    statement: player.statement || null,
+    honors: player.honors || [],
+    social: player.social?.x || player.social?.instagram ? { x: player.social.x || null, instagram: player.social.instagram || null } : null,
+    badges: [player.athletic?.varsityStarter ? 'Varsity starter' : null, player.athletic?.allConference ? 'All-conference / all-state' : null].filter(Boolean),
+    tests: player.academics?.showTests && (player.academics.sat || player.academics.act) ? { sat: player.academics.sat || null, act: player.academics.act || null } : null,
+    gpaWeighted: player.academics?.gpa != null ? Boolean(player.academics.weighted) : null,
     gradYear: player.gradYear || null,
     jersey: player.jersey || null,
-    highSchool: player.highSchool?.name ? { name: player.highSchool.name, state: player.highSchool.state || null } : null,
-    club: player.club?.name ? { name: player.club.name, team: player.club.team || null, level: player.club.level || null } : null,
+    highSchool: player.highSchool?.name ? { name: player.highSchool.name, state: player.highSchool.state || null, jersey: player.highSchool.jersey || null } : null,
+    club: player.club?.name ? { name: player.club.name, team: player.club.team || null, level: player.club.level || null, jersey: player.club.jersey || null } : null,
     gpa: player.academics?.gpa ?? null,
     gpaScale: player.academics?.gpaScale ?? 4,
     stats,
@@ -189,6 +199,8 @@ const cardView = onRequest({ cors: true }, async (req, res) => {
         token: tokenInfo ? token : null, contactId: tokenInfo?.contactId || null, schoolName: tokenInfo?.schoolName || null,
       });
       tx.update(playerRef, { cardStats: applyVideoPlay(player.get('cardStats'), { now, schoolName: tokenInfo?.schoolName || null, title }) });
+      // Public play count per video (shown on the card), keyed by the video's link.
+      tx.set(db.doc(`cardCounts/${slug}`), { videos: { [video.url]: FieldValue.increment(1) } }, { merge: true });
       if (tokenInfo?.contactId) {
         tx.set(db.doc(`families/${fid}/players/${pid}/contacts/${tokenInfo.contactId}`), { lastVideoViewAt: now, videoViews: FieldValue.increment(1) }, { merge: true });
       }

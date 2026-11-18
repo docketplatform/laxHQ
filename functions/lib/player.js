@@ -24,6 +24,24 @@ function str(v, field, { max = 80, required = false } = {}) {
   return s || null;
 }
 
+/** Multi-line text: keeps line breaks, trims each line, caps blank lines. */
+function longText(v, field, { max = 1500 } = {}) {
+  if (v === undefined || v === null || v === '') return null;
+  if (typeof v !== 'string') throw new ValidationError(field, `${field} must be text.`);
+  const s = v.replace(/\r/g, '').split('\n').map((l) => l.replace(/[ \t]+/g, ' ').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (s.length > max) throw new ValidationError(field, `${field} is too long (${max} characters at most).`);
+  return s || null;
+}
+
+/** A social handle from "@name", "name" or a profile link. */
+function handle(v, field) {
+  const s = str(v, field, { max: 120 });
+  if (!s) return null;
+  const h = s.replace(/^https?:\/\/(www\.)?(x|twitter|instagram)\.com\//i, '').replace(/^@/, '').split(/[/?#]/)[0];
+  if (!/^[A-Za-z0-9_.]{1,30}$/.test(h)) throw new ValidationError(field, `${field} should look like @name.`);
+  return h;
+}
+
 function num(v, field, { min, max, integer = false } = {}) {
   if (v === undefined || v === null || v === '') return null;
   const n = typeof v === 'string' ? Number(v) : v;
@@ -81,6 +99,25 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
   }
   if (need('position')) out.position = oneOf(input.position, POSITIONS, 'Position', { required: true });
   if (has('jersey')) out.jersey = str(input.jersey, 'Jersey', { max: 3 });
+  if (has('otherPositions')) {
+    const list = Array.isArray(input.otherPositions) ? input.otherPositions : [];
+    out.otherPositions = [...new Set(list)].filter((x) => POSITIONS.includes(x) && x !== (out.position || input.position)).slice(0, 3);
+  }
+  if (has('heightIn')) out.heightIn = num(input.heightIn, 'Height', { min: 48, max: 90, integer: true });
+  if (has('hand')) out.hand = oneOf(input.hand, ['R', 'L', 'B'], 'Dominant hand');
+  if (has('hometown')) {
+    const h = input.hometown || {};
+    out.hometown = { city: str(h.city, 'Hometown', { max: 60 }), state: oneOf(h.state, STATES, 'Hometown state') };
+  }
+  if (has('statement')) out.statement = longText(input.statement, 'Personal statement', { max: 1500 });
+  if (has('honors')) {
+    out.honors = (Array.isArray(input.honors) ? input.honors : []).slice(0, 12)
+      .map((h, i) => str(h, `Honor ${i + 1}`, { max: 140 })).filter(Boolean);
+  }
+  if (has('social')) {
+    const so = input.social || {};
+    out.social = { x: handle(so.x, 'X handle'), instagram: handle(so.instagram, 'Instagram handle') };
+  }
   if (need('openDivisions')) {
     const list = Array.isArray(input.openDivisions) ? input.openDivisions : [];
     const clean = [...new Set(list)].filter((d) => DIVISIONS.includes(d));
@@ -93,6 +130,7 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
       name: str(hs.name, 'High school', { max: 100 }),
       state: oneOf(hs.state, STATES, 'High school state'),
       ncesId: str(hs.ncesId, 'NCES id', { max: 20 }),
+      jersey: str(hs.jersey, 'High school jersey', { max: 3 }),
     };
   }
   if (has('academics')) {
@@ -105,6 +143,7 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
       sat: num(a.sat, 'SAT', { min: 400, max: 1600, integer: true }),
       act: num(a.act, 'ACT', { min: 1, max: 36, integer: true }),
       transcriptUploaded: Boolean(a.transcriptUploaded),
+      showTests: Boolean(a.showTests),
     };
   }
   if (has('club')) {
@@ -114,6 +153,7 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
       name: str(c.name, 'Club', { max: 80 }),
       team: str(c.team, 'Club team', { max: 40 }),
       level: oneOf(c.level, CLUB_LEVELS, 'Club level'),
+      jersey: str(c.jersey, 'Club jersey', { max: 3 }),
     };
   }
   if (has('rankings')) {
@@ -135,12 +175,15 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
     out.athletic = { varsityStarter: Boolean(a.varsityStarter), allConference: Boolean(a.allConference) };
   }
   if (has('filmUrl')) out.filmUrl = url(input.filmUrl, 'Film link');
+  if (has('filmTitle')) out.filmTitle = str(input.filmTitle, 'Reel title', { max: 80 });
+  if (has('filmDate')) out.filmDate = /^\d{4}-(0[1-9]|1[0-2])$/.test(input.filmDate || '') ? input.filmDate : null;
   if (has('videos')) {
     out.videos = (Array.isArray(input.videos) ? input.videos : []).filter((v) => v && (v.url || v.title)).slice(0, 8)
       .map((v, i) => ({
         title: str(v.title, `Video ${i + 1} title`, { max: 80 }) || null,
         url: url(v.url, `Video ${i + 1} link`),
         kind: VIDEO_KINDS.includes(v.kind) ? v.kind : 'other',
+        date: /^\d{4}-(0[1-9]|1[0-2])$/.test(v.date || '') ? v.date : null,
       }))
       .map((v, i) => { if (!v.url) throw new ValidationError(`videos.${i}.url`, `Add a link for video ${i + 1}.`); return v; });
   }

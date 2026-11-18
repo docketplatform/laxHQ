@@ -95,6 +95,7 @@ service cloud.firestore {
     match /clubs/{id}         { allow read: if true; }
     match /schoolStats/{id}   { allow read: if true; }
     match /cards/{slug}       { allow read: if true; }
+    match /cardCounts/{slug}  { allow read: if true; }   // video play counts shown on the card; server-written
     match /config/{id}        { allow read: if true; }
     match /coaches/{id}       { allow read: if resource.data.status == 'active'; }  // queries must filter status == 'active'
 

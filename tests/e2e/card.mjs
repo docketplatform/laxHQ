@@ -16,6 +16,11 @@ try {
   await page.fill('#profile-form-film', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
   await page.fill('#profile-form-vt0', 'Full game vs Long Island Express');
   await page.fill('#profile-form-vu0', 'https://vimeo.com/123456789');
+  await page.fill('#profile-form-stmt', 'Two-way attackman who loves the ride.\nVarsity starter as a sophomore.');
+  await page.fill('#profile-form-honors', 'All-Conference 2026\nTeam MVP');
+  await page.selectOption('#profile-form-height', '70');
+  await page.check('#profile-form input[name="otherPositions[]"][value="midfield"]');
+  await page.fill('#profile-form-cj', '22');
   await page.click('#profile-form button[type=submit]');
   await page.getByText('Profile saved.').waitFor();
 
@@ -31,11 +36,17 @@ try {
   await coach.goto(link.replace(/^https?:\/\/[^/]+\//, BASE));
   await coach.getByRole('heading', { name: 'Eli Park' }).waitFor({ timeout: 15000 });
   const text = await coach.locator('.rcard').innerText();
-  assert.match(text, /Attack · Class of 2028/);
+  assert.match(text, /Attack, Midfield · Class of 2028/);
   assert.match(text, /#9/);
   assert.match(text, /44\s*Goals/);
-  assert.match(text, /3\.8\s*GPA/);
-  assert.match(text, /Garden City HS, NY/);
+  assert.match(text, /GPA[\s\S]*3\.8/);
+  assert.match(text, /Garden City HS/);
+  assert.match(text, /Attack, Midfield/);
+  assert.match(text, /5′10″/);
+  assert.match(text, /Two-way attackman/);
+  assert.match(text, /Team MVP/);
+  await coach.locator('.rteam', { hasText: 'Long Island Express' }).locator('svg text', { hasText: '22' }).waitFor();
+  await coach.locator('#rshare').waitFor();
 
   if (SHOTS) await coach.screenshot({ path: `${SHOTS}/10-public-card.png`, fullPage: true });
 
