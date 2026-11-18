@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       email:
-        description: Email the parent signs in with (they must have signed in once)
+        description: Email the parent signs in with (works before or after their first sign-in)
         required: true
       players:
         description: How many players the family can add

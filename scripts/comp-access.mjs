@@ -5,7 +5,7 @@
 //   COMP_EMAIL=parent@example.com GCLOUD_PROJECT=laxhq-ce7b7 node scripts/comp-access.mjs revoke
 //
 // Run it from GitHub: Actions → "Complimentary Pro" → Run workflow.
-// The person must have signed in to the app once first.
+// If the person hasn't signed in yet, Pro turns on automatically at their first sign-in.
 //
 // It writes families/{fid}/billing/org (the same source a club or advisor seat uses), so any later
 // Stripe or App Store change is combined with it instead of overwriting it.
@@ -30,13 +30,22 @@ async function main() {
   if (!['grant', 'revoke'].includes(mode)) fail('Say grant or revoke.');
   if (!email.includes('@')) fail('COMP_EMAIL is not an email address.');
 
-  let user;
-  try { user = await auth.getUserByEmail(email); } catch {
-    fail('No LaxHQ login uses that email yet. Sign in to the app once with it, then run this again.');
+  let user = null;
+  try { user = await auth.getUserByEmail(email); } catch { user = null; }
+  const userDoc = user ? await db.doc(`users/${user.uid}`).get() : null;
+  const fid = userDoc?.exists ? userDoc.get('familyId') : null;
+  if (!fid) {
+    // No family yet: save the grant; the first sign-in with this email claims it (bootstrapFamily).
+    const ref = db.doc(`compGrants/${email}`);
+    if (mode === 'grant') {
+      await ref.set({ maxPlayers: players, expiresAt: Timestamp.fromDate(new Date(Date.now() + days * 86400000)), createdAt: FieldValue.serverTimestamp() });
+      console.log(`Saved: Pro (up to ${players} player(s), ${days} days) turns on the first time this email signs in.`);
+    } else {
+      await ref.delete();
+      console.log('Removed the waiting complimentary Pro for this email.');
+    }
+    return;
   }
-  const userDoc = await db.doc(`users/${user.uid}`).get();
-  const fid = userDoc.exists ? userDoc.get('familyId') : null;
-  if (!fid) fail('That login has no family yet. Open the app once after signing in, then run this again.');
 
   const famRef = db.doc(`families/${fid}`);
   const orgRef = famRef.collection('billing').doc('org');

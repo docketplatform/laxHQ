@@ -129,9 +129,29 @@ exports.bootstrapFamily = onCall(async (req) => {
     return { familyId: famRef.id, created: true };
   });
 
+  await claimCompGrant(token, result.familyId);
   const claims = await setClaims(uid, result.familyId);
   return { ...result, claims };
 });
+
+/**
+ * Complimentary Pro set up before the person had a login (scripts/comp-access.mjs writes
+ * compGrants/{email}, which only the server can read). Claimed once, at the first sign-in
+ * with that verified email.
+ */
+async function claimCompGrant(token, fid) {
+  const email = token.email_verified && token.email ? String(token.email).toLowerCase() : null;
+  if (!email || !fid) return;
+  const ref = db.doc(`compGrants/${email}`);
+  const grant = await ref.get();
+  if (!grant.exists) return;
+  await db.doc(`families/${fid}/billing/org`).set({
+    active: true, orgId: 'comp', maxPlayers: grant.get('maxPlayers') || 1,
+    expiresAt: grant.get('expiresAt') || null, grantedAt: FieldValue.serverTimestamp(),
+  });
+  await ref.delete();
+  await billing.resolveEntitlement(fid);
+}
 
 /**
  * createInvite — a family member invites a co-parent or the player.

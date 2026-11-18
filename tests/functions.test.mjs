@@ -59,6 +59,27 @@ before(async () => {
   assert.ok(res && res.ok, 'Emulators are not running. Use: npm run test:functions');
 });
 
+test('complimentary Pro saved before sign-in is claimed at the first verified sign-in, once', async () => {
+  const a = await newClient('comp');
+  const email = a.auth.currentUser.email.toLowerCase();
+  const { Timestamp } = await import('firebase-admin/firestore');
+  await adb.doc(`compGrants/${email}`).set({ maxPlayers: 2, expiresAt: Timestamp.fromDate(new Date(Date.now() + 86400000 * 30)) });
+
+  // An unverified email does not claim it.
+  const first = await a.call('bootstrapFamily', {});
+  assert.equal(first.claims.pro, false);
+  assert.ok((await adb.doc(`compGrants/${email}`).get()).exists);
+
+  await adminAuth().updateUser(a.auth.currentUser.uid, { emailVerified: true });
+  await a.auth.currentUser.getIdToken(true);
+  const second = await a.call('bootstrapFamily', {});
+  assert.equal(second.claims.pro, true);
+  const ent = (await adb.doc(`families/${second.familyId}`).get()).get('entitlement');
+  assert.equal(ent.plan, 'pro'); assert.equal(ent.source, 'org'); assert.equal(ent.maxPlayers, 2);
+  assert.equal((await adb.doc(`compGrants/${email}`).get()).exists, false);
+  await a.close();
+});
+
 test('bootstrapFamily creates a free family, sets claims, and is idempotent', async () => {
   const a = await newClient('parent');
   const first = await a.call('bootstrapFamily', { familyName: 'Morrison family' });
