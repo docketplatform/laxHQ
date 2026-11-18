@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 // functions/ has its own firebase-admin copy; initialize that one before loading card.js.
 const { initializeApp, getApps } = require('../../functions/node_modules/firebase-admin/lib/app/index.js');
 if (!getApps().length) initializeApp({ projectId: 'demo-laxhq' });
-const { buildCard, applyView, BOT_UA } = require('../../functions/card.js');
+const { buildCard, applyView, applyVideoPlay, BOT_UA } = require('../../functions/card.js');
 
 test('the card carries only shareable fields', () => {
   const c = buildCard({
@@ -52,4 +52,26 @@ test('a family can show first name and last initial only', () => {
   assert.equal(c.name, 'Jake M.');
   assert.equal(c.lastName, null);
   assert.equal(JSON.stringify(c).includes('Morrison'), false);
+});
+
+test('videos: the main reel first, then extra videos; events come from the plan', () => {
+  const c = buildCard({
+    firstName: 'Jake', lastName: 'Morrison', filmUrl: 'https://youtu.be/aaaaaaaaaaa',
+    videos: [{ title: 'Full game vs Elite', url: 'https://vimeo.com/1', kind: 'game' }, { title: 'dupe', url: 'https://youtu.be/aaaaaaaaaaa', kind: 'highlight' }],
+    cardEvents: [{ title: 'Summer Showcase', start: '2027-06-20', end: '2027-06-22', city: 'Baltimore', state: 'MD' }],
+  });
+  assert.deepEqual(c.videos.map((v) => v.title), ['Highlight reel', 'Full game vs Elite']);
+  assert.equal(c.events[0].city, 'Baltimore');
+  assert.deepEqual(buildCard({ firstName: 'A' }).videos, []);
+});
+
+test('video plays roll up by day and remember which school watched what', () => {
+  const now = new Date('2026-11-18T12:00:00Z');
+  let st = applyVideoPlay({ views30d: 4 }, { now, schoolName: 'Duke University', title: 'Highlight reel' });
+  st = applyVideoPlay(st, { now, schoolName: null, title: 'Full game' });
+  assert.equal(st.views30d, 4, 'card views untouched');
+  assert.equal(st.videoPlays, 2); assert.equal(st.videoPlays30d, 2);
+  assert.deepEqual(st.recentVideoViews.map((r) => r.schoolName), [null, 'Duke University']);
+  const later = applyVideoPlay(st, { now: new Date('2027-01-20T12:00:00Z'), title: 'x' });
+  assert.equal(later.videoPlays30d, 1, 'old days drop out');
 });

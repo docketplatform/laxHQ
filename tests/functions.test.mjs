@@ -280,6 +280,24 @@ test('card views: counted once per viewer, bots ignored, coach tokens attributed
   assert.deepEqual(st.recentSchools, ['Tufts University'], 'a token from another family is not attributed');
   const contact = await adb.doc(`families/${familyId}/players/${playerId}/contacts/c1`).get();
   assert.equal(contact.get('cardViews'), 1);
+
+  // Video plays: counted per video, and a coach's play tells the family.
+  await a.call('updatePlayer', { playerId, filmUrl: 'https://youtu.be/aaaaaaaaaaa', videos: [{ title: 'Full game', url: 'https://vimeo.com/1', kind: 'game' }] });
+  await until(async () => ((await adb.doc(`cards/${slug}`).get()).get('videos') || []).length === 2);
+  const play = (v, r, ip) => fetch('http://127.0.0.1:5001/demo-laxhq/us-central1/cardView', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': CHROME, 'X-Forwarded-For': ip }, body: JSON.stringify({ slug, r, event: 'video', v }),
+  }).then((res) => res.json());
+  assert.equal((await play(0, undefined, '203.0.113.9')).counted, true);
+  assert.equal((await play(0, undefined, '203.0.113.9')).counted, false, 'same video, same viewer');
+  assert.equal((await play(1, 'tokTufts1', '198.51.100.4')).counted, true);
+  const st2 = (await pref.get()).get('cardStats');
+  assert.equal(st2.videoPlays, 2);
+  assert.equal(st2.total, 3, 'plays are not card views');
+  assert.equal(st2.recentVideoViews[0].schoolName, 'Tufts University');
+  assert.equal(st2.recentVideoViews[0].title, 'Full game');
+  const alerts = await pref.collection('alerts').where('type', '==', 'video_watched').get();
+  assert.equal(alerts.size, 1);
+  assert.match(alerts.docs[0].get('title'), /A coach at Tufts University watched Jake’s Full game/);
 });
 
 // ---------- Phase 4: coach outreach ----------

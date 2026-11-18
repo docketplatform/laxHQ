@@ -22,7 +22,7 @@ export function bindSwitcher(ctx) {
   document.querySelectorAll('[data-player]').forEach((b) => b.addEventListener('click', () => ctx.selectPlayer(b.dataset.player)));
 }
 
-const ALERT_LINK = { followup_due: (a) => `#/coaches/${a.refs?.contactId}`, overlap: () => '#/events', sync_failed: () => '#/events' };
+const ALERT_LINK = { followup_due: (a) => `#/coaches/${a.refs?.contactId}`, overlap: () => '#/events', sync_failed: () => '#/events', video_watched: () => '#/profile' };
 
 function alertsHtml(ctx) {
   const list = [...(ctx.state.alerts || [])].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)).slice(0, 5);

@@ -13,7 +13,9 @@ try {
   await page.fill('#profile-form-jersey', '9');
   await page.fill('#profile-form-st-goals', '44');
   await page.fill('#profile-form-st-assists', '20');
-  await page.fill('#profile-form-film', 'https://www.hudl.com/video/example');
+  await page.fill('#profile-form-film', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  await page.fill('#profile-form-vt0', 'Full game vs Long Island Express');
+  await page.fill('#profile-form-vu0', 'https://vimeo.com/123456789');
   await page.click('#profile-form button[type=submit]');
   await page.getByText('Profile saved.').waitFor();
 
@@ -25,6 +27,7 @@ try {
 
   // A coach opens the link in their own browser, not signed in.
   const coach = await run.page('coach', { width: 1280, height: 900 }, { userAgent: DESKTOP_CHROME });
+  await coach.context().route(/youtube-nocookie\.com|ytimg\.com|player\.vimeo\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<p>video</p>' }));
   await coach.goto(link.replace(/^https?:\/\/[^/]+\//, BASE));
   await coach.getByRole('heading', { name: 'Eli Park' }).waitFor({ timeout: 15000 });
   const text = await coach.locator('.rcard').innerText();
@@ -36,8 +39,15 @@ try {
 
   if (SHOTS) await coach.screenshot({ path: `${SHOTS}/10-public-card.png`, fullPage: true });
 
-  // The family sees the view.
+  // Film plays inside the card; the second video is one tap away.
+  await coach.click('#rplayer [data-play]');
+  assert.match(await coach.locator('#rplayer iframe').getAttribute('src'), /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ.*autoplay=1/);
+  await coach.click('.rvid[data-v="1"]');
+  assert.match(await coach.locator('#rplayer iframe').getAttribute('src'), /player\.vimeo\.com\/video\/123456789/);
+
+  // The family sees the view and the plays.
   await page.locator('#card-stats', { hasText: /Views, 30 days\s*1/ }).waitFor({ timeout: 15000 });
+  await page.locator('#card-stats', { hasText: /Video plays, 30 days\s*2/ }).waitFor({ timeout: 15000 });
 
   // The family can switch to first name + last initial.
   await page.selectOption('#card-name', 'initial');
@@ -55,7 +65,7 @@ try {
   await coach.getByText('This card isn’t available').waitFor({ timeout: 10000 });
 
   assert.deepEqual(run.errors, [], run.errors.join('; '));
-  console.log('e2e card: publish, public page, full name or last initial, view counted, unpublish ✔');
+  console.log('e2e card: publish, public page, videos play in the card, full name or last initial, views and plays counted, unpublish ✔');
 } finally {
   await run.close();
 }

@@ -41,3 +41,11 @@ test('partial updates only validate the fields sent', () => {
   assert.deepEqual(validatePlayer({ jersey: '7' }, { now, partial: true }), { jersey: '7' });
   assert.throws(() => validatePlayer({ position: 'striker' }, { now, partial: true }), /Position/);
 });
+
+test('videos: up to 8, each needs a link, unknown types become other', () => {
+  const out = validatePlayer({ ...base, videos: [{ title: 'Game', url: 'https://vimeo.com/1', kind: 'game' }, { url: 'https://youtu.be/x', kind: 'weird' }, {}] });
+  assert.deepEqual(out.videos, [{ title: 'Game', url: 'https://vimeo.com/1', kind: 'game' }, { title: null, url: 'https://youtu.be/x', kind: 'other' }]);
+  assert.throws(() => validatePlayer({ ...base, videos: [{ title: 'No link' }] }), /link for video 1/);
+  assert.throws(() => validatePlayer({ ...base, videos: [{ url: 'javascript:alert(1)' }] }), /web link|https/);
+  assert.equal(validatePlayer({ ...base, videos: Array.from({ length: 12 }, (_, i) => ({ url: `https://youtu.be/v${i}` })) }).videos.length, 8);
+});

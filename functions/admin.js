@@ -55,7 +55,7 @@ const adminOverview = onCall({ timeoutSeconds: 120, memory: '512MiB' }, async (r
       id: p.id, firstName: d.firstName || '', lastName: d.lastName || '', gradYear: d.gradYear || null,
       sport: d.sport || null, position: d.position || null, club: d.club?.name || null,
       highSchool: d.highSchool?.name || null, targetCount: d.targetCount || 0,
-      cardPublished: Boolean(d.cardPublished), hasFilm: Boolean(d.filmUrl),
+      cardPublished: Boolean(d.cardPublished), hasFilm: Boolean(d.filmUrl || (d.videos || []).length),
     });
   }
   const byUid = Object.fromEntries(accounts.map((a) => [a.uid, a]));

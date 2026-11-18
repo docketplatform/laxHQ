@@ -97,7 +97,7 @@ test('overlaps become one alert per plan event', () => {
 
 const { initializeApp, getApps } = require('../../functions/node_modules/firebase-admin/lib/app/index.js');
 if (!getApps().length) initializeApp({ projectId: 'demo-laxhq', storageBucket: 'demo-laxhq.appspot.com' });
-const { planExpense, cardSummer } = require('../../functions/schedule.js');
+const { planExpense, cardSummer, cardEvents } = require('../../functions/schedule.js');
 const { cleanReceipt } = require('../../functions/expenses.js');
 const { isPrivateAddress } = require('../../functions/lib/net.js');
 
@@ -134,4 +134,14 @@ test('receipt answers are cleaned before they reach the form', () => {
 test('private and metadata addresses are refused for feeds', () => {
   for (const ip of ['127.0.0.1', '10.1.2.3', '172.20.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '::1', 'fd00::1', '::ffff:10.0.0.1']) assert.ok(isPrivateAddress(ip), ip);
   for (const ip of ['8.8.8.8', '151.101.1.1', '2606:4700::1111']) assert.ok(!isPrivateAddress(ip), ip);
+});
+
+test('card events: registered or attended events in date order, with dates and place', () => {
+  const ev = cardEvents([
+    { title: 'Later Camp', start: '2027-07-10', status: 'registered', location: { city: 'Durham', state: 'NC' } },
+    { title: 'Maybe', start: '2027-06-01', status: 'considering' },
+    { title: 'Showcase', start: '2027-06-20', end: '2027-06-22', status: 'attended', location: { city: 'Baltimore', state: 'MD' } },
+  ]);
+  assert.deepEqual(ev.map((e) => e.title), ['Showcase', 'Later Camp']);
+  assert.deepEqual(ev[0], { title: 'Showcase', start: '2027-06-20', end: '2027-06-22', city: 'Baltimore', state: 'MD' });
 });

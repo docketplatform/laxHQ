@@ -289,6 +289,16 @@ function cardSummer(plan) {
     .map((e) => e.location?.city || e.title).filter(Boolean).slice(0, 6);
 }
 
+/** Card "Where to see me": registered/attended events from last year on (the card shows upcoming ones). Pure. */
+function cardEvents(plan) {
+  return plan.filter((e) => ['registered', 'attended'].includes(e.status) && e.start >= `${new Date().getFullYear() - 1}-01-01`)
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .map((e) => ({
+      title: String(e.title || 'Event').slice(0, 120), start: e.start, end: e.end || null,
+      city: e.location?.city || null, state: e.location?.state || null,
+    })).slice(0, 12);
+}
+
 const onPlanWrite = onDocumentWritten('families/{fid}/players/{pid}/plan/{eid}', async (event) => {
   const { fid, pid, eid } = event.params;
   const after = event.data.after.exists ? event.data.after.data() : null;
@@ -300,12 +310,14 @@ const onPlanWrite = onDocumentWritten('families/{fid}/players/{pid}/plan/{eid}',
   const pref = db.doc(`families/${fid}/players/${pid}`);
   const plan = (await pref.collection('plan').get()).docs.map((d) => d.data());
   const summer = cardSummer(plan);
+  const events = cardEvents(plan);
   const player = await pref.get();
-  if (player.exists && JSON.stringify(player.get('cardSummer') || []) !== JSON.stringify(summer)) await pref.update({ cardSummer: summer });
+  if (player.exists && (JSON.stringify(player.get('cardSummer') || []) !== JSON.stringify(summer)
+    || JSON.stringify(player.get('cardEvents') || []) !== JSON.stringify(events))) await pref.update({ cardSummer: summer, cardEvents: events });
   await recomputeOverlaps(fid, pid);
 });
 
 module.exports = {
   init, connectSchedule, selectCalendars, disconnectTeam, syncTeams, devSyncTeams, onPlanWrite,
-  syncTeam, recomputeOverlaps, planExpense, cardSummer,
+  syncTeam, recomputeOverlaps, planExpense, cardSummer, cardEvents,
 };

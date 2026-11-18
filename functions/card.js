@@ -32,6 +32,14 @@ function cardName(player) {
   };
 }
 
+/** Videos on the card: the main reel (filmUrl) first, then the extra videos. */
+function cardVideos(player) {
+  const list = [];
+  if (player.filmUrl) list.push({ title: 'Highlight reel', url: player.filmUrl, kind: 'highlight' });
+  for (const v of player.videos || []) if (v?.url && v.url !== player.filmUrl) list.push({ title: v.title || null, url: v.url, kind: v.kind || 'other' });
+  return list.slice(0, 9);
+}
+
 /** The public card for a player. Only shareable fields. */
 function buildCard(player, { contactEmail, summer = [] } = {}) {
   const stats = {};
@@ -50,9 +58,28 @@ function buildCard(player, { contactEmail, summer = [] } = {}) {
     statsSeason: player.stats?.season || null,
     rankings: (player.rankings || []).map((r) => ({ source: r.source, value: r.value, url: r.url || null })),
     filmUrl: player.filmUrl || null,
+    videos: cardVideos(player),
+    events: (player.cardEvents || []).slice(0, 8),
     summer,
     contactEmail: contactEmail || null,
     updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+/** Pure: update cardStats with one video play. */
+function applyVideoPlay(stats = {}, { now, schoolName, title }) {
+  const daily = { ...(stats.videoDaily || {}) };
+  const today = dayKey(now);
+  daily[today] = (daily[today] || 0) + 1;
+  const cutoff = dayKey(new Date(now.getTime() - (DAYS_KEPT - 1) * 864e5));
+  for (const k of Object.keys(daily)) if (k < cutoff) delete daily[k];
+  const recentVideoViews = [{ schoolName: schoolName || null, title: title || 'Video', at: now }, ...(stats.recentVideoViews || [])].slice(0, 8);
+  return {
+    ...stats,
+    videoDaily: daily,
+    videoPlays30d: Object.values(daily).reduce((a, b) => a + b, 0),
+    videoPlays: (stats.videoPlays || 0) + 1,
+    recentVideoViews,
   };
 }
 
@@ -147,6 +174,38 @@ const cardView = onRequest({ cors: true }, async (req, res) => {
   const dedupeRef = db.doc(`cardViews/${slug}/recent/${viewer}`);
   const playerRef = db.doc(`families/${fid}/players/${pid}`);
 
+  if (body.event === 'video') {
+    const idx = Math.max(0, Math.min(8, Number.parseInt(body.v, 10) || 0));
+    const video = (card.get('videos') || [])[idx];
+    if (!video) { res.status(404).json({ error: 'no such video' }); return; }
+    const title = video.title || (video.kind === 'game' ? 'game film' : 'highlight reel');
+    const playRef = db.doc(`cardViews/${slug}/recent/${viewer}_v${idx}`);
+    const counted = await db.runTransaction(async (tx) => {
+      const [recent, player] = await Promise.all([tx.get(playRef), tx.get(playerRef)]);
+      if (recent.exists && now - recent.get('at').toDate() < DEDUPE_MINUTES * 60e3) return false;
+      tx.set(playRef, { at: now });
+      tx.set(db.collection(`cardViews/${slug}/views`).doc(), {
+        at: now, type: 'video', video: idx, videoTitle: title,
+        token: tokenInfo ? token : null, contactId: tokenInfo?.contactId || null, schoolName: tokenInfo?.schoolName || null,
+      });
+      tx.update(playerRef, { cardStats: applyVideoPlay(player.get('cardStats'), { now, schoolName: tokenInfo?.schoolName || null, title }) });
+      if (tokenInfo?.contactId) {
+        tx.set(db.doc(`families/${fid}/players/${pid}/contacts/${tokenInfo.contactId}`), { lastVideoViewAt: now, videoViews: FieldValue.increment(1) }, { merge: true });
+      }
+      if (tokenInfo?.schoolName) {
+        // One alert per coach and video, so the family knows film was actually watched.
+        tx.set(db.doc(`families/${fid}/players/${pid}/alerts/video_${token}_${idx}`), {
+          type: 'video_watched', severity: 'info',
+          title: `A coach at ${tokenInfo.schoolName} watched ${player.get('firstName') || 'your player'}’s ${title}`,
+          refs: { contactId: tokenInfo.contactId || null }, createdAt: now, dismissedAt: null,
+        });
+      }
+      return true;
+    });
+    res.json({ counted });
+    return;
+  }
+
   const counted = await db.runTransaction(async (tx) => {
     const [recent, player] = await Promise.all([tx.get(dedupeRef), tx.get(playerRef)]);
     if (recent.exists && now - recent.get('at').toDate() < DEDUPE_MINUTES * 60e3) return false;
@@ -164,4 +223,4 @@ const cardView = onRequest({ cors: true }, async (req, res) => {
 });
 
 module.exports = {
-  cardName, onPlayerWrite, cardView, buildCard, applyView, BOT_UA };
+  cardName, cardVideos, applyVideoPlay, familyContactEmail, onPlayerWrite, cardView, buildCard, applyView, BOT_UA };

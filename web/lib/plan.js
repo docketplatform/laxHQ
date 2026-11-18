@@ -68,7 +68,7 @@ function anchorDate(anchor, player) {
 /** Steps LaxHQ can tick by itself from data the family already entered. */
 export const AUTO_DONE = {
   profile: (p) => Boolean(p.highSchool?.name && p.academics?.gpa != null && p.club?.name),
-  film: (p) => Boolean(p.filmUrl),
+  film: (p) => Boolean(p.filmUrl || (p.videos || []).length),
 };
 
 function applies(item, player) {

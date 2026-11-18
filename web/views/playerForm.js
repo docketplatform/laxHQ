@@ -2,6 +2,7 @@
 import { esc, options } from '../util.js';
 import { SPORTS, POSITIONS, DIVISIONS, CLUB_LEVELS, STATES, STATS_BY_POSITION, STAT_LABELS } from '../lib/options.js';
 import { gradYearOptions } from '../lib/plan.js';
+import { VIDEO_KINDS } from '../lib/video.js';
 
 /**
  * @param {object} p        existing player (or draft) values
@@ -13,6 +14,7 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
   const years = gradYearOptions();
   const statKeys = STATS_BY_POSITION[p.position] || ['goals', 'assists', 'groundBalls'];
   const rankings = [...(p.rankings || []), {}].slice(0, 3);
+  const videoRows = [...(p.videos || []), {}].slice(0, 8);
 
   return `<form id="${id}" class="stack" data-keep novalidate>
     <fieldset class="card"><legend><h2>Player</h2></legend>
@@ -72,7 +74,19 @@ export function playerFormHtml(p = {}, { id = 'player-form', full = false, submi
     <fieldset class="card"><legend><h2>Stats and film</h2></legend>
       <div class="field"><label for="${id}-season">Season</label><input id="${id}-season" name="stats.season" value="${esc(p.stats?.season)}" placeholder="2026 high school"></div>
       <div class="two">${statKeys.map((k) => `<div class="field"><label for="${id}-st-${k}">${STAT_LABELS[k]}</label><input id="${id}-st-${k}" name="stats.${k}" data-type="number" inputmode="decimal" value="${esc(p.stats?.[k])}"></div>`).join('')}</div>
-      <div class="field"><label for="${id}-film">Highlight film link</label><input id="${id}-film" name="filmUrl" type="url" value="${esc(p.filmUrl)}" placeholder="https://www.hudl.com/…"><span class="small">Shown first on the recruiting card. No reel yet? <a href="#/highlights">Get one made</a>.</span></div>
+    </fieldset>
+
+    <fieldset class="card" id="${id}-videos"><legend><h2>Videos</h2></legend>
+      <p class="small">They play right on the recruiting card. Paste links from Hudl, YouTube, Vimeo or Google Drive (set it to “Anyone with the link”). For Hudl, use the video’s full address (hudl.com/video/…).</p>
+      <div class="field"><label for="${id}-film">Main highlight reel</label><input id="${id}-film" name="filmUrl" type="url" value="${esc(p.filmUrl)}" placeholder="https://www.hudl.com/video/…"><span class="small">Plays first on the card. No reel yet? <a href="#/highlights">Get one made</a>.</span></div>
+      ${videoRows.map((v, i) => `<div class="video-row">
+        <div class="two">
+          <div class="field"><label for="${id}-vt${i}">Video ${i + 2} title</label><input id="${id}-vt${i}" name="videos.${i}.title" maxlength="80" value="${esc(v.title)}" placeholder="${i === 0 ? 'vs. Chesapeake Elite, full game' : 'Fall ball 2026'}"></div>
+          <div class="field"><label for="${id}-vk${i}">Type</label><select id="${id}-vk${i}" name="videos.${i}.kind">${options(VIDEO_KINDS, v.kind || (i === 0 ? 'game' : 'highlight'))}</select></div>
+        </div>
+        <div class="field"><label for="${id}-vu${i}">Link</label><input id="${id}-vu${i}" name="videos.${i}.url" type="url" value="${esc(v.url)}" placeholder="https://"></div>
+      </div>`).join('')}
+      ${videoRows.length < 8 ? '<p class="small">Save to get room for another video.</p>' : ''}
     </fieldset>` : ''}
 
     <p id="${id}-msg" role="status" aria-live="polite"></p>
@@ -86,6 +100,10 @@ export function cleanPlayerInput(raw) {
   if (out.rankings) {
     out.rankings = Object.values(out.rankings).filter((r) => r && (r.source || r.value || r.url))
       .map((r) => ({ source: r.source, value: r.value, url: r.url || null }));
+  }
+  if (out.videos) {
+    out.videos = Object.values(out.videos).filter((v) => v && (v.url || v.title))
+      .map((v) => ({ title: v.title || null, url: v.url || null, kind: v.kind || 'other' }));
   }
   if (out.stats) {
     const s = {}; for (const [k, v] of Object.entries(out.stats)) if (v !== null && v !== undefined) s[k] = v;

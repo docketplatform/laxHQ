@@ -44,6 +44,8 @@ function oneOf(v, list, field, { required = false } = {}) {
   return v;
 }
 
+const VIDEO_KINDS = ['highlight', 'game', 'skills', 'other'];
+
 function url(v, field) {
   const s = str(v, field, { max: 500 });
   if (!s) return null;
@@ -133,6 +135,15 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
     out.athletic = { varsityStarter: Boolean(a.varsityStarter), allConference: Boolean(a.allConference) };
   }
   if (has('filmUrl')) out.filmUrl = url(input.filmUrl, 'Film link');
+  if (has('videos')) {
+    out.videos = (Array.isArray(input.videos) ? input.videos : []).filter((v) => v && (v.url || v.title)).slice(0, 8)
+      .map((v, i) => ({
+        title: str(v.title, `Video ${i + 1} title`, { max: 80 }) || null,
+        url: url(v.url, `Video ${i + 1} link`),
+        kind: VIDEO_KINDS.includes(v.kind) ? v.kind : 'other',
+      }))
+      .map((v, i) => { if (!v.url) throw new ValidationError(`videos.${i}.url`, `Add a link for video ${i + 1}.`); return v; });
+  }
   if (has('regions')) {
     out.regions = (Array.isArray(input.regions) ? input.regions : []).slice(0, 8)
       .map((r, i) => str(r, `Region ${i + 1}`, { max: 40 })).filter(Boolean);
@@ -141,5 +152,6 @@ function validatePlayer(input, { now = new Date(), partial = false } = {}) {
 }
 
 module.exports = {
+  VIDEO_KINDS,
   validatePlayer, ValidationError, SPORTS, POSITIONS, DIVISIONS, CLUB_LEVELS, STATES, STAT_KEYS, schoolYearEnding,
 };
